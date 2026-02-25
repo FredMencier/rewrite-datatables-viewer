@@ -5,27 +5,30 @@ import {
   RecipeRunStats, 
   SourceFileResults, 
   ROIMetrics, 
-  RecipePerformanceMetrics 
+  RecipePerformanceMetrics,
+  UsageReportEntry
 } from './types/data';
 
 /**
- * Classe principale de l'application OpenRewrite Data Visualizer
+ * Classe principale de l'application Migration Data Visualizer
  * Coordonne tous les services et composants de visualisation
  */
 export class App {
   private dataLoader: DataLoader;
   private dataProcessor: DataProcessor;
-  private currentTab: string = 'overview';
+  private currentTab: string = 'usage';
   private data: {
     recipeStats: RecipeRunStats[];
     sourceResults: SourceFileResults[];
     roiMetrics: ROIMetrics | null;
     enrichedStats: RecipePerformanceMetrics[];
+    usageReport: UsageReportEntry[];
   } = {
     recipeStats: [],
     sourceResults: [],
     roiMetrics: null,
-    enrichedStats: []
+    enrichedStats: [],
+    usageReport: []
   };
 
   constructor() {
@@ -50,7 +53,7 @@ export class App {
       this.initializeUI();
       
       // Afficher le dashboard par défaut
-      await this.showTab('overview');
+      await this.showTab('usage');
       
     } catch (error) {
       console.error('Erreur lors de l\'initialisation:', error);
@@ -64,10 +67,11 @@ export class App {
    * Charge et traite toutes les données nécessaires
    */
   private async loadAndProcessData(): Promise<void> {
-    const { recipeStats, sourceResults } = await this.dataLoader.loadAllData();
+    const { recipeStats, sourceResults, usageReport } = await this.dataLoader.loadAllData();
     
     this.data.recipeStats = recipeStats;
     this.data.sourceResults = sourceResults;
+    this.data.usageReport = usageReport;
     
     // Calculer les métriques ROI
     this.data.roiMetrics = this.dataProcessor.calculateROIMetrics(recipeStats, sourceResults);
@@ -78,6 +82,7 @@ export class App {
     console.log('Données chargées:', {
       recipes: recipeStats.length,
       sourceResults: sourceResults.length,
+      usageReport: usageReport.length,
       roi: this.data.roiMetrics?.roi.toFixed(2) + '%'
     });
   }
@@ -184,6 +189,9 @@ export class App {
 
       // Charger le contenu de l'onglet
       switch (tabId) {
+        case 'usage':
+          await this.renderUsageTab();
+          break;
         case 'overview':
           await this.renderOverviewTab();
           break;
@@ -234,6 +242,138 @@ export class App {
     if (recipesElement) {
       recipesElement.textContent = enrichedStats.length.toString();
     }
+  }
+
+  /**
+   * Rendu de l'onglet Reporting d'usage (page d'accueil)
+   */
+  private async renderUsageTab(): Promise<void> {
+    console.log('Rendu de l\'onglet Reporting d\'Usage');
+
+    const container = document.getElementById('usage-tab');
+    if (!container) {
+      return;
+    }
+
+    container.innerHTML = '';
+
+    if (this.data.usageReport.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'chart-empty';
+      empty.textContent = 'Aucune donnée de reporting disponible';
+      container.appendChild(empty);
+      return;
+    }
+
+    const wrapper = document.createElement('section');
+    wrapper.className = 'chart-container full-width';
+
+    const card = document.createElement('div');
+    card.className = 'chart-card';
+
+    const header = document.createElement('div');
+    header.className = 'chart-header';
+    header.innerHTML = `<h3>Usage report (usage-report.csv) - ${this.data.usageReport.length} lignes</h3>`;
+
+    const body = document.createElement('div');
+    body.className = 'chart-body';
+
+    const tableContainer = document.createElement('div');
+    tableContainer.style.overflowX = 'auto';
+    tableContainer.className = 'usage-table-container';
+
+    body.appendChild(tableContainer);
+    card.appendChild(header);
+    card.appendChild(body);
+    wrapper.appendChild(card);
+    container.appendChild(wrapper);
+
+    this.renderUsageReportTable(tableContainer, this.data.usageReport);
+  }
+
+  /**
+   * Tableau de reporting d'usage
+   */
+  private renderUsageReportTable(
+    container: HTMLElement,
+    usageData: UsageReportEntry[]
+  ): void {
+    const meta = document.createElement('div');
+    meta.className = 'usage-meta';
+
+    const table = document.createElement('table');
+    table.className = 'usage-table';
+
+    const columns: Array<{ key: keyof UsageReportEntry; label: string }> = [
+      { key: 'runId', label: 'runId' },
+      { key: 'recipeId', label: 'recipeId' },
+      { key: 'organizationId', label: 'organizationId' },
+      { key: 'recipeRunState', label: 'recipeRunState' },
+      { key: 'repositoryOrigin', label: 'repositoryOrigin' },
+      { key: 'repositoryPath', label: 'repositoryPath' },
+      { key: 'repositoryBranch', label: 'repositoryBranch' },
+      { key: 'recipeRunUserEmail', label: 'recipeRunUserEmail' },
+      { key: 'errorMarkers', label: 'errorMarkers' },
+      { key: 'warningMarkers', label: 'warningMarkers' },
+      { key: 'infoMarkers', label: 'infoMarkers' },
+      { key: 'debugMarkers', label: 'debugMarkers' },
+      { key: 'totalFilesResults', label: 'totalFilesResults' },
+      { key: 'totalFilesSearched', label: 'totalFilesSearched' },
+      { key: 'totalFilesChanges', label: 'totalFilesChanges' },
+      { key: 'timeSavingsInMinutes', label: 'timeSavingsInMinutes' },
+      { key: 'astLoadInMilliseconds', label: 'astLoadInMilliseconds' },
+      { key: 'recipeRunInMilliseconds', label: 'recipeRunInMilliseconds' },
+      { key: 'dependencyResolutionInMilliseconds', label: 'dependencyResolutionInMilliseconds' },
+      { key: 'recipeRunCreatedAt', label: 'recipeRunCreatedAt' },
+      { key: 'recipeRunUpdatedAt', label: 'recipeRunUpdatedAt' },
+      { key: 'stack', label: 'stack' },
+      { key: 'priority', label: 'priority' },
+      { key: 'commitId', label: 'commitId' },
+      { key: 'type', label: 'type' },
+      { key: 'commitState', label: 'commitState' },
+      { key: 'commitUserEmail', label: 'commitUserEmail' },
+      { key: 'commitModifiedAt', label: 'commitModifiedAt' }
+    ];
+
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+
+    const indexHeader = document.createElement('th');
+    indexHeader.textContent = '#';
+    headerRow.appendChild(indexHeader);
+
+    columns.forEach(({ label }) => {
+      const th = document.createElement('th');
+      th.textContent = label;
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+
+    const tbody = document.createElement('tbody');
+    usageData.forEach((row, index) => {
+      const tr = document.createElement('tr');
+      tr.className = 'usage-row';
+
+      const indexCell = document.createElement('td');
+      indexCell.textContent = String(index + 1);
+      tr.appendChild(indexCell);
+
+      columns.forEach(({ key }) => {
+        const td = document.createElement('td');
+        const value = row[key];
+        td.textContent = value === null || value === undefined ? '' : String(value);
+        tr.appendChild(td);
+      });
+
+      tbody.appendChild(tr);
+    });
+
+    meta.textContent = `Colonnes: ${columns.length} | Lignes: ${usageData.length}`;
+
+    table.appendChild(thead);
+    table.appendChild(tbody);
+    container.appendChild(meta);
+    container.appendChild(table);
   }
 
   /**

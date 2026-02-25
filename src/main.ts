@@ -2,13 +2,13 @@ import { App } from './App';
 import './styles.css';
 
 /**
- * Point d'entrée principal de l'application OpenRewrite Data Visualizer
+ * Point d'entrée principal de l'application Migration Data Visualizer
  */
 
 // Attendre que le DOM soit chargé
 document.addEventListener('DOMContentLoaded', async () => {
   try {
-    console.log('🚀 Initialisation de OpenRewrite Data Visualizer');
+    console.log('🚀 Initialisation de Migration Data Visualizer');
     
     // Créer et initialiser l'application
     const app = new App();
@@ -54,10 +54,10 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 // Affichage des informations de debug
-console.log('🔧 OpenRewrite Data Visualizer initialisé');
+console.log('🔧 Migration Data Visualizer initialisé');
 
 // Ajouter des informations utiles dans la console
-console.log('📊 OpenRewrite Data Visualizer');
+console.log('📊 Migration Data Visualizer');
 console.log('🔗 Données attendues:', [
   'data/org.openrewrite.table.RecipeRunStats.csv',
   'data/org.openrewrite.table.SourcesFileResults.csv'

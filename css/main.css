@@ -346,6 +346,10 @@ body {
     grid-column: 1 / -1;
 }
 
+.half-width {
+    grid-column: span 1;
+}
+
 /* Cartes KPI style Grafana */
 .kpi-cards {
     display: grid;
@@ -538,6 +542,40 @@ body {
     min-height: 450px;
     background: var(--panel-background);
     position: relative;
+}
+
+.usage-grid .chart-body {
+    min-height: 320px;
+}
+
+.dashboard-grid .chart-body {
+    min-height: 320px;
+}
+
+.usage-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    border: 2px solid #60a5fa;
+}
+
+.usage-table thead th {
+    text-align: left;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    border: 1px solid #60a5fa;
+    background-color: rgba(96, 165, 250, 0.12);
+}
+
+.usage-table tbody td {
+    padding: 0.75rem 1rem;
+    border: 1px solid #60a5fa;
+}
+
+.usage-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
 }
 
 .chart-body::before {

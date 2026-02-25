@@ -160,3 +160,38 @@ export interface FormatOptions {
   /** Utiliser des séparateurs de milliers */
   useThousandsSeparator: boolean;
 }
+
+/**
+ * Interface pour le reporting d'usage des recettes
+ * Correspond au fichier usage-report.csv
+ */
+export interface UsageReportEntry {
+  runId: string;
+  recipeId: string;
+  organizationId: string;
+  recipeRunState: string;
+  repositoryOrigin: string;
+  repositoryPath: string;
+  repositoryBranch: string;
+  recipeRunUserEmail: string;
+  errorMarkers: number;
+  warningMarkers: number;
+  infoMarkers: number;
+  debugMarkers: number;
+  totalFilesResults: number;
+  totalFilesSearched: number;
+  totalFilesChanges: number;
+  timeSavingsInMinutes: number;
+  astLoadInMilliseconds: number;
+  recipeRunInMilliseconds: number;
+  dependencyResolutionInMilliseconds: number;
+  recipeRunCreatedAt: string;
+  recipeRunUpdatedAt: string;
+  stack: string;
+  priority: string;
+  commitId: string | null;
+  type: string | null;
+  commitState: string | null;
+  commitUserEmail: string | null;
+  commitModifiedAt: string | null;
+}

@@ -1052,8 +1052,25 @@ body {
     .files-table td {
         padding: 0.5rem 0.75rem;
     }
-    
+
     .files-table {
         font-size: 0.7rem;
     }
+}
+
+/* Usage report table - bordures visibles forcées */
+#usage-tab .usage-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 2px solid #60a5fa !important;
+}
+
+#usage-tab .usage-table thead th,
+#usage-tab .usage-table tbody td {
+    border: 1px solid #60a5fa !important;
+}
+
+#usage-tab .usage-table thead th {
+    background-color: rgba(96, 165, 250, 0.18) !important;
+    color: #f9fafb !important;
 }

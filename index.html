@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OpenRewrite Data Visualizer</title>
+    <title>Migration Data Visualizer</title>
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/visualizations.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -15,7 +15,7 @@
             <div class="header-content">
                 <h1 class="app-title">
                     <span class="logo">🔄</span>
-                    OpenRewrite Data Visualizer
+                    Migration Data Visualizer
                 </h1>
                 <div class="header-controls">
                     <button id="refresh-data" class="btn btn-secondary">
@@ -40,7 +40,10 @@
         <main class="main-content">
             <!-- Navigation Tabs -->
             <nav class="nav-tabs">
-                <button class="tab-button active" data-tab="overview">
+                <button class="tab-button active" data-tab="usage">
+                    <span>🧾</span> Reporting d'usage
+                </button>
+                <button class="tab-button" data-tab="overview">
                     <span>📊</span> Vue d'ensemble
                 </button>
                 <button class="tab-button" data-tab="performance">
@@ -56,8 +59,13 @@
 
             <!-- Tab Content Panels -->
             <div class="tab-content">
+                <!-- Usage Report Tab -->
+                <div id="usage-tab" class="tab-panel active">
+                    <!-- Contenu injecté dynamiquement par App.ts -->
+                </div>
+
                 <!-- Overview Tab -->
-                <div id="overview-tab" class="tab-panel active">
+                <div id="overview-tab" class="tab-panel">
                     <div class="dashboard-grid">
                         <!-- KPI Cards -->
                         <section class="kpi-cards">

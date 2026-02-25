@@ -10,7 +10,7 @@ Webpack avec serveur de développement et build de production
 CSS moderne avec variables et design système cohérent
 Interface Utilisateur :
 
-Dashboard responsive avec navigation par onglets (Vue d'ensemble, Performance, ROI, Fichiers, Recettes)
+Dashboard responsive avec navigation par onglets (Reporting d'usage, Vue d'ensemble, Performance, Fichiers, Recettes)
 Cartes KPI dynamiques (Temps économisé, Fichiers modifiés, ROI global, Recettes actives)
 Système de notifications toast pour feedback utilisateur
 Gestion d'erreurs robuste avec messages informatifs

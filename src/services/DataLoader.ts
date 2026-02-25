@@ -1,5 +1,5 @@
 import * as d3 from 'd3';
-import { RecipeRunStats, SourceFileResults } from '../types/data';
+import { RecipeRunStats, SourceFileResults, UsageReportEntry } from '../types/data';
 
 /**
  * Service responsable du chargement et parsing des fichiers CSV OpenRewrite
@@ -92,21 +92,85 @@ export class DataLoader {
   }
 
   /**
+   * Charge et parse le fichier usage-report.csv
+   */
+  public async loadUsageReport(filePath: string = 'data/usage-report.csv'): Promise<UsageReportEntry[]> {
+    const cacheKey = `usage-report-${filePath}`;
+
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey) as UsageReportEntry[];
+    }
+
+    try {
+      const csvData = await d3.csv(filePath);
+
+      const parsedData: UsageReportEntry[] = csvData.map(row => {
+        return {
+          runId: this.parseString(row['runId']),
+          recipeId: this.parseString(row['recipeId']),
+          organizationId: this.parseString(row['organizationId']),
+          recipeRunState: this.parseString(row['recipeRunState']),
+          repositoryOrigin: this.parseString(row['repositoryOrigin']),
+          repositoryPath: this.parseString(row['repositoryPath']),
+          repositoryBranch: this.parseString(row['repositoryBranch']),
+          recipeRunUserEmail: this.parseString(row['recipeRunUserEmail']),
+          errorMarkers: this.parseNumber(row['errorMarkers']),
+          warningMarkers: this.parseNumber(row['warningMarkers']),
+          infoMarkers: this.parseNumber(row['infoMarkers']),
+          debugMarkers: this.parseNumber(row['debugMarkers']),
+          totalFilesResults: this.parseNumber(row['totalFilesResults']),
+          totalFilesSearched: this.parseNumber(row['totalFilesSearched']),
+          totalFilesChanges: this.parseNumber(row['totalFilesChanges']),
+          timeSavingsInMinutes: this.parseNumber(row['timeSavingsInMinutes']),
+          astLoadInMilliseconds: this.parseNumber(row['astLoadInMilliseconds']),
+          recipeRunInMilliseconds: this.parseNumber(row['recipeRunInMilliseconds']),
+          dependencyResolutionInMilliseconds: this.parseNumber(row['dependencyResolutionInMilliseconds']),
+          recipeRunCreatedAt: this.parseString(row['recipeRunCreatedAt']),
+          recipeRunUpdatedAt: this.parseString(row['recipeRunUpdatedAt']),
+          stack: this.parseString(row['stack']),
+          priority: this.parseString(row['priority']),
+          commitId: this.parseStringOrNull(row['commitId']),
+          type: this.parseStringOrNull(row['type']),
+          commitState: this.parseStringOrNull(row['commitState']),
+          commitUserEmail: this.parseStringOrNull(row['commitUserEmail']),
+          commitModifiedAt: this.parseStringOrNull(row['commitModifiedAt'])
+        };
+      }).filter(item => {
+        if (!item.runId || !item.recipeId) {
+          return false;
+        }
+
+        const commitState = (item.commitState || '').trim().toUpperCase();
+        return commitState === 'COMPLETED';
+      });
+
+      this.cache.set(cacheKey, parsedData);
+      return parsedData;
+    } catch (error) {
+      console.error('Erreur lors du chargement des données usage-report:', error);
+      throw new Error(`Impossible de charger les données depuis ${filePath}: ${error}`);
+    }
+  }
+
+  /**
    * Charge tous les fichiers de données disponibles
    */
   public async loadAllData(): Promise<{
     recipeStats: RecipeRunStats[];
     sourceResults: SourceFileResults[];
+    usageReport: UsageReportEntry[];
   }> {
     try {
-      const [recipeStats, sourceResults] = await Promise.all([
+      const [recipeStats, sourceResults, usageReport] = await Promise.all([
         this.loadRecipeRunStats(),
-        this.loadSourceFileResults()
+        this.loadSourceFileResults(),
+        this.loadUsageReport()
       ]);
 
       return {
         recipeStats,
-        sourceResults
+        sourceResults,
+        usageReport
       };
     } catch (error) {
       console.error('Erreur lors du chargement de toutes les données:', error);
