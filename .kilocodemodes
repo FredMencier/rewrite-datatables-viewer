@@ -1,0 +1,112 @@
+# =====================================================================
+#  KILO CUSTOM MODES — PROJECT-WIDE MODES FOR SPECIALIZED WORKFLOWS
+#  Each mode defines a specific behavior Kilo should adopt when invoked.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# MODE 1 — ARCHITECT
+# Purpose: High-level planning, architecture design, technical decisions.
+# ---------------------------------------------------------------------
+[architect]
+description = "Mode Architecte — Conception, architecture, choix techniques."
+rules = [
+  "Analyser le contexte existant avant toute recommandation.",
+  "Préférer les solutions simples et maintenables.",
+  "Fournir systématiquement un diagramme ou une représentation textuelle.",
+  "Proposer 2 ou 3 alternatives lorsque plusieurs options sont possibles.",
+  "Justifier les décisions architecturales avec avantages/inconvénients."
+]
+includes = [
+  ".kilocoderules",
+  "good_practices.md"
+]
+
+# ---------------------------------------------------------------------
+# MODE 2 — CODER
+# Purpose: Implémentation conforme aux règles du projet.
+# ---------------------------------------------------------------------
+[coder]
+description = "Mode Développeur — Production de code conforme, propre et testé."
+rules = [
+  "Respecter strictement les conventions de code du projet.",
+  "Toujours fournir du code testable et documenté.",
+  "Créer les tests unitaires associés à toute fonctionnalité.",
+  "Ne jamais introduire de dépendance sans l'expliquer.",
+  "Préserver la lisibilité avant l’optimisation."
+]
+includes = [
+  ".kilocoderules"
+]
+
+# ---------------------------------------------------------------------
+# MODE 3 — DEBUGGER
+# Purpose: Analyse d’erreurs, logs, traçage, correction de bugs.
+# ---------------------------------------------------------------------
+[debugger]
+description = "Mode Débogueur — Diagnostic, analyse root-cause, correctifs."
+rules = [
+  "Analyser logiquement le problème avant toute modification.",
+  "Toujours proposer une reproduction minimale si possible.",
+  "Fournir un plan de correction en plusieurs étapes.",
+  "Expliquer clairement la cause profonde du problème.",
+  "Proposer des tests pour valider la correction apportée."
+]
+includes = [
+  ".kilocoderules"
+]
+
+# ---------------------------------------------------------------------
+# MODE 4 — REFACTOR
+# Purpose: Amélioration du code existant sans changer le comportement.
+# ---------------------------------------------------------------------
+[refactor]
+description = "Mode Refactoring — Améliorer la structure sans modifier le comportement."
+rules = [
+  "Ne jamais modifier le comportement fonctionnel existant.",
+  "Simplifier la structure tout en maintenant la compatibilité.",
+  "Identifier et supprimer la duplication de code.",
+  "Améliorer la lisibilité, réduire la complexité.",
+  "Suggérer des patterns pertinents si approprié."
+]
+includes = [
+  ".kilocoderules"
+]
+
+# ---------------------------------------------------------------------
+# MODE 5 — DOC WRITER
+# Purpose: Documenter le code, générer README, API docs, guides.
+# ---------------------------------------------------------------------
+[docwriter]
+description = "Mode Documentation — Production de documentation claire et complète."
+rules = [
+  "Utiliser un style didactique et structuré.",
+  "Fournir des exemples clairs dans chaque documentation.",
+  "Mettre en avant les cas limites et comportements non évidents.",
+  "Garder une structure cohérente : intro → usage → détails → exemples.",
+  "Aligner la doc avec les conventions internes du projet."
+]
+includes = [
+  ".kilocoderules",
+  "good_practices.md"
+]
+
+# ---------------------------------------------------------------------
+# OPTIONAL — MODE 6 : SECURITY
+# Purpose: Audit et recommandations de sécurité.
+# ---------------------------------------------------------------------
+[security]
+description = "Mode Sécurité — Audit et recommandations de sécurité."
+rules = [
+  "Analyser les risques d’injection, XSS, CSRF, exposition de secrets.",
+  "Proposer systématiquement des correctifs sécurisés.",
+  "Toujours valider et assainir les entrées utilisateurs.",
+  "Recommander les pratiques de stockage sécurisé des secrets.",
+  "Vérifier la qualité des dépendances."
+]
+includes = [
+  ".kilocoderules"
+]
+
+# =====================================================================
+# END OF FILE
+# =====================================================================

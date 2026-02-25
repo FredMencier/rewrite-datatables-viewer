@@ -1,0 +1,5 @@
+"The recipe","Source file count","Source file changed count","Cumulative scanning time (ns)","99th percentile scanning time (ns)","Max scanning time (ns)","Cumulative edit time (ns)","99th percentile edit time (ns)","Max edit time (ns)"
+"The recipe whose stats are being measured both individually and cumulatively.","The number of source files the recipe ran over.","The number of source files which were changed in the recipe run. Includes files created, deleted, and edited.","The total time spent across the scanning phase of this recipe.","99 out of 100 scans completed in this amount of time.","The max time scanning any one source file.","The total time spent across the editing phase of this recipe.","99 out of 100 edits completed in this amount of time.","The max time editing any one source file."
+"org.openrewrite.java.migrate.lang.StringFormatted","30","3","0","0.0","0","5769041","2883576.0","2784125"
+"org.openrewrite.config.CompositeRecipe","30","3","0","0.0","0","13999","6396.0","6292"
+"org.openrewrite.java.OrderImports","30","3","0","0.0","0","78378164","2.3068668E7","22732042"

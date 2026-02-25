@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenRewrite Data Visualizer</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/visualizations.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="app-title">
+                    <span class="logo">🔄</span>
+                    OpenRewrite Data Visualizer
+                </h1>
+                <div class="header-controls">
+                    <button id="refresh-data" class="btn btn-secondary">
+                        <span>↻</span> Actualiser
+                    </button>
+                    <button id="export-data" class="btn btn-primary">
+                        <span>📊</span> Exporter
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="loading-overlay">
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <p>Chargement des données...</p>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Navigation Tabs -->
+            <nav class="nav-tabs">
+                <button class="tab-button active" data-tab="overview">
+                    <span>📊</span> Vue d'ensemble
+                </button>
+                <button class="tab-button" data-tab="performance">
+                    <span>⚡</span> Performance
+                </button>
+                <button class="tab-button" data-tab="files">
+                    <span>📁</span> Fichiers
+                </button>
+                <button class="tab-button" data-tab="recipes">
+                    <span>🍳</span> Recettes
+                </button>
+            </nav>
+
+            <!-- Tab Content Panels -->
+            <div class="tab-content">
+                <!-- Overview Tab -->
+                <div id="overview-tab" class="tab-panel active">
+                    <div class="dashboard-grid">
+                        <!-- KPI Cards -->
+                        <section class="kpi-cards">
+                            <div class="kpi-card">
+                                <div class="kpi-icon">⏱️</div>
+                                <div class="kpi-content">
+                                    <div class="kpi-value" id="total-time-saved">-</div>
+                                    <div class="kpi-label">Temps Total Économisé</div>
+                                </div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-icon">🎯</div>
+                                <div class="kpi-content">
+                                    <div class="kpi-value" id="total-files-changed">-</div>
+                                    <div class="kpi-label">Fichiers Modifiés</div>
+                                </div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-icon">🔧</div>
+                                <div class="kpi-content">
+                                    <div class="kpi-value" id="recipes-count">-</div>
+                                    <div class="kpi-label">Recettes Actives</div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Main Charts -->
+                        <section class="chart-container full-width">
+                            <div class="chart-card">
+                                <div class="chart-header">
+                                    <h3>Répartition des Économies par Recette</h3>
+                                    <div class="chart-controls">
+                                        <select id="savings-chart-type">
+                                            <option value="pie">Camembert</option>
+                                            <option value="bar">Barres</option>
+                                            <option value="treemap">TreeMap</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="chart-body">
+                                    <div id="savings-by-recipe-chart"></div>
+                                </div>
+                            </div>
+                        </section>
+
+                    </div>
+                </div>
+
+                <!-- Performance Tab -->
+                <div id="performance-tab" class="tab-panel">
+                    <div class="dashboard-grid">
+                        <section class="chart-container full-width">
+                            <div class="chart-card">
+                                <div class="chart-header">
+                                    <h3>Temps d'Exécution par Recette</h3>
+                                    <div class="chart-controls">
+                                        <button class="btn btn-sm active" data-time-unit="ms">Millisecondes</button>
+                                        <button class="btn btn-sm" data-time-unit="s">Secondes</button>
+                                    </div>
+                                </div>
+                                <div class="chart-body">
+                                    <div id="execution-time-chart"></div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="chart-container full-width">
+                            <div class="chart-card">
+                                <div class="chart-header">
+                                    <h3>Distribution Scan vs Edit</h3>
+                                </div>
+                                <div class="chart-body">
+                                    <div id="scan-vs-edit-chart"></div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+
+
+                <!-- Files Tab -->
+                <div id="files-tab" class="tab-panel">
+                    <div class="dashboard-grid">
+                        <section class="chart-container full-width">
+                            <div class="chart-card">
+                                <div class="chart-header">
+                                    <h3>Flux de Modifications des Fichiers</h3>
+                                </div>
+                                <div class="chart-body">
+                                    <div id="file-changes-chart"></div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+
+                <!-- Recipes Tab -->
+                <div id="recipes-tab" class="tab-panel">
+                    <div class="dashboard-grid">
+                        <section class="chart-container full-width">
+                            <div class="chart-card">
+                                <div class="chart-header">
+                                    <h3>Hiérarchie des Recettes</h3>
+                                </div>
+                                <div class="chart-body">
+                                    <div id="recipe-hierarchy-chart"></div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Tooltip Container -->
+        <div id="tooltip" class="tooltip" style="opacity: 0;">
+            <div class="tooltip-content"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="dist/bundle.js"></script>
+</body>
+</html>
