@@ -1,0 +1,42 @@
+name: Kilocode Auto-Fix
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  fix-issue:
+    # On évite de lancer l'IA sur des issues qui n'ont pas de label spécifique (optionnel mais recommandé)
+    if: contains(github.event.issue.labels.*.name, 'bug') || contains(github.event.issue.labels.*.name, 'enhancement')
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Kilocode
+        run: |
+          npm install -g @kilocode/cli
+          
+      - name: Run Kilocode Fix
+        id: kilocode
+        env:
+          KILOCODE_API_KEY: ${{ secrets.KILOCODE_API_KEY }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        run: |
+          kilo run --auto "Fix the issue described in this issue $ISSUE_TITLE : $ISSUE_BODY"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.KILOCODE_GITHUB_TOKEN }}
+          commit-message: "fix: solve issue #${{ github.event.issue.number }} ${{ github.event.issue.title }} via Kilocode"
+          title: "Fix for Issue #${{ github.event.issue.number }} ${{ github.event.issue.title }}"
+          body: |
+            Cette PR a été générée automatiquement par Kilocode suite à l'ouverture de l'issue #${{ github.event.issue.number }}.
+            
+            Veuillez vérifier les modifications avant de merger.
+          branch: kilocode-fix-${{ github.event.issue.number }}
+          base: main
+          delete-branch: true
