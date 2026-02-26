@@ -5,7 +5,7 @@ Fonctionnalités Implémentées
 Architecture Technique :
 
 TypeScript avec configuration stricte et compilation optimisée
-D3.js v7 pour les visualisations de données
+Apache ECharts v6 pour les graphiques interactifs
 Webpack avec serveur de développement et build de production
 CSS moderne avec variables et design système cohérent
 Interface Utilisateur :
@@ -36,6 +36,6 @@ Build production : npm run build
 📊 Visualisations Incluses
 Graphiques en barres pour les économies par recette
 Scatter plots performance vs économies
-Infrastructure D3.js prête pour visualisations avancées
+Infrastructure Apache ECharts pour visualisations avancées
 Framework extensible pour ajouter nouvelles visualisations
 <!-- Bonjour -->
