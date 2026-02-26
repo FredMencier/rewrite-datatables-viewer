@@ -1,4 +1,5 @@
 import * as d3 from 'd3';
+import * as echarts from 'echarts';
 import { DataLoader } from './services/DataLoader';
 import { DataProcessor } from './services/DataProcessor';
 import { 
@@ -16,6 +17,7 @@ import {
 export class App {
   private dataLoader: DataLoader;
   private dataProcessor: DataProcessor;
+  private chartInstances: Map<string, echarts.ECharts> = new Map();
   private currentTab: string = 'usage';
   private data: {
     recipeStats: RecipeRunStats[];
@@ -406,26 +408,29 @@ export class App {
    * Graphique des temps d'exécution par recette
    */
   private async renderExecutionTimeChart(): Promise<void> {
-    const container = d3.select('#execution-time-chart');
-    container.selectAll('*').remove();
+    const chartContainer = document.getElementById('execution-time-chart');
+    if (!chartContainer) return;
 
     if (this.data.enrichedStats.length === 0) {
-      container.append('div')
-        .attr('class', 'chart-empty')
-        .text('Aucune donnée de performance disponible');
+      chartContainer.innerHTML = '<div class="chart-empty">Aucune donnée de performance disponible</div>';
+      const existingChart = this.chartInstances.get('execution-time-chart');
+      if (existingChart) {
+        existingChart.dispose();
+        this.chartInstances.delete('execution-time-chart');
+      }
       return;
     }
+
+    chartContainer.innerHTML = '';
 
     // Déterminer l'unité de temps active
     const activeTimeButton = document.querySelector('[data-time-unit].active') as HTMLElement;
     const timeUnit = activeTimeButton?.getAttribute('data-time-unit') || 'ms';
     
-    // Préparer les données pour le graphique
     const chartData = this.data.enrichedStats
       .sort((a, b) => b.totalExecutionTimeMs - a.totalExecutionTimeMs)
       .slice(0, 10); // Top 10
 
-    // Fonction de conversion selon l'unité
     const convertTime = (nanoseconds: number): number => {
       switch (timeUnit) {
         case 's': return nanoseconds / 1_000_000_000;
@@ -434,7 +439,6 @@ export class App {
       }
     };
 
-    // Fonction de formatage pour les labels
     const formatTime = (value: number): string => {
       switch (timeUnit) {
         case 's': return `${value.toFixed(3)}s`;
@@ -443,7 +447,6 @@ export class App {
       }
     };
 
-    // Convertir les données selon l'unité sélectionnée
     const convertedData = chartData.map(d => ({
       ...d,
       totalExecutionTimeConverted: convertTime(d.cumulativeScanningTime + d.cumulativeEditTime),
@@ -451,136 +454,74 @@ export class App {
       editTimeConverted: convertTime(d.cumulativeEditTime)
     }));
 
-    // Dimensions
-    const margin = { top: 20, right: 30, bottom: 80, left: 120 };
-    const containerElement = container.node() as HTMLElement;
-    const containerWidth = containerElement?.getBoundingClientRect().width || 800;
-    const width = Math.max(800, containerWidth) - margin.left - margin.right;
-    const height = 500 - margin.top - margin.bottom;
-
-    // Créer le SVG
-    const svg = container.append('svg')
-      .attr('class', 'chart-svg')
-      .attr('width', width + margin.left + margin.right)
-      .attr('height', height + margin.top + margin.bottom);
-
-    const g = svg.append('g')
-      .attr('transform', `translate(${margin.left},${margin.top})`);
-
-    // Échelles
-    const yScale = d3.scaleBand()
-      .domain(convertedData.map(d => d.recipe.split('.').pop() || d.recipe))
-      .range([0, height])
-      .padding(0.1);
-
-    const xScale = d3.scaleLinear()
-      .domain([0, d3.max(convertedData, d => d.totalExecutionTimeConverted) || 0])
-      .range([0, width]);
-
-    // Couleurs fixes pour les types de temps
-    const scanColor = '#52c4b3';  // Teal pour le scan
-    const editColor = '#ff6b35';  // Orange pour l'édition
-
-    // Axes
-    g.append('g')
-      .attr('class', 'axis y-axis')
-      .call(d3.axisLeft(yScale));
-
-    g.append('g')
-      .attr('class', 'axis x-axis')
-      .attr('transform', `translate(0,${height})`)
-      .call(d3.axisBottom(xScale).tickFormat(d => formatTime(Number(d))));
-
-    // Barres de scan - couleur teal pour toutes les recettes
-    g.selectAll('.bar-scan')
-      .data(convertedData)
-      .enter().append('rect')
-      .attr('class', 'bar scanning')
-      .attr('y', d => yScale(d.recipe.split('.').pop() || d.recipe) || 0)
-      .attr('height', yScale.bandwidth())
-      .attr('x', 0)
-      .attr('width', d => xScale(d.scanTimeConverted))
-      .attr('fill', scanColor);
-
-    // Barres d'édition - couleur orange pour toutes les recettes - empilées sur scan
-    g.selectAll('.bar-edit')
-      .data(convertedData)
-      .enter().append('rect')
-      .attr('class', 'bar editing')
-      .attr('y', d => yScale(d.recipe.split('.').pop() || d.recipe) || 0)
-      .attr('height', yScale.bandwidth())
-      .attr('x', d => xScale(d.scanTimeConverted))
-      .attr('width', d => xScale(d.editTimeConverted))
-      .attr('fill', editColor);
-
-    // Ajouter les valeurs totales comme labels
-    g.selectAll('.time-label')
-      .data(convertedData)
-      .enter().append('text')
-      .attr('class', 'time-label')
-      .attr('x', d => xScale(d.totalExecutionTimeConverted) + 5)
-      .attr('y', d => (yScale(d.recipe.split('.').pop() || d.recipe) || 0) + yScale.bandwidth() / 2)
-      .attr('dy', '0.35em')
-      .style('font-size', '11px')
-      .style('fill', 'var(--text-secondary)')
-      .text(d => formatTime(d.totalExecutionTimeConverted));
-
-    // Ajouter une légende
-    const legend = g.append('g')
-      .attr('class', 'legend')
-      .attr('transform', `translate(${width - 150}, 20)`);
-
-    legend.append('rect')
-      .attr('x', -10)
-      .attr('y', -10)
-      .attr('width', 140)
-      .attr('height', 50)
-      .attr('fill', 'var(--panel-background)')
-      .attr('stroke', 'var(--border-color)')
-      .attr('rx', 5);
-
-    legend.append('rect')
-      .attr('x', 0)
-      .attr('y', 0)
-      .attr('width', 15)
-      .attr('height', 8)
-      .attr('fill', scanColor);
-
-    legend.append('text')
-      .attr('x', 20)
-      .attr('y', 8)
-      .style('font-size', '10px')
-      .style('fill', 'var(--text-secondary)')
-      .text('Temps de Scan');
-
-    legend.append('rect')
-      .attr('x', 0)
-      .attr('y', 15)
-      .attr('width', 15)
-      .attr('height', 8)
-      .attr('fill', editColor);
-
-    legend.append('text')
-      .attr('x', 20)
-      .attr('y', 23)
-      .style('font-size', '10px')
-      .style('fill', 'var(--text-secondary)')
-      .text('Temps d\'Édition');
+    const chart = this.getOrCreateChart('execution-time-chart');
+    chart.setOption({
+      backgroundColor: 'transparent',
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        formatter: (params: any) => {
+          const values = params as Array<{ seriesName: string; value: number }>;
+          const total = values.reduce((sum, p) => sum + p.value, 0);
+          const lines = values.map(v => `${v.seriesName}: ${formatTime(v.value)}`);
+          return `${lines.join('<br/>')}<br/><strong>Total: ${formatTime(total)}</strong>`;
+        }
+      },
+      legend: {
+        data: ['Temps de Scan', 'Temps d\'Édition'],
+        textStyle: { color: '#cbd5e1' }
+      },
+      grid: { top: 60, right: 20, bottom: 30, left: 220 },
+      xAxis: {
+        type: 'value',
+        axisLabel: {
+          color: '#94a3b8',
+          formatter: (value: number) => formatTime(value)
+        },
+        splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.15)' } }
+      },
+      yAxis: {
+        type: 'category',
+        data: convertedData.map(d => d.recipe.split('.').pop() || d.recipe),
+        axisLabel: { color: '#cbd5e1' }
+      },
+      series: [
+        {
+          name: 'Temps de Scan',
+          type: 'bar',
+          stack: 'total',
+          data: convertedData.map(d => d.scanTimeConverted),
+          itemStyle: { color: '#52c4b3' }
+        },
+        {
+          name: 'Temps d\'Édition',
+          type: 'bar',
+          stack: 'total',
+          data: convertedData.map(d => d.editTimeConverted),
+          itemStyle: { color: '#ff6b35' }
+        }
+      ]
+    });
   }
 
   /**
    * Graphique distribution scan vs edit
    */
   private async renderScanVsEditChart(): Promise<void> {
-    const container = d3.select('#scan-vs-edit-chart');
-    container.selectAll('*').remove();
+    const chartContainer = document.getElementById('scan-vs-edit-chart');
+    if (!chartContainer) return;
 
     if (this.data.enrichedStats.length === 0) {
-      container.append('div')
-        .attr('class', 'chart-empty')
-        .text('Aucune donnée disponible');
+      chartContainer.innerHTML = '<div class="chart-empty">Aucune donnée disponible</div>';
+      const existingChart = this.chartInstances.get('scan-vs-edit-chart');
+      if (existingChart) {
+        existingChart.dispose();
+        this.chartInstances.delete('scan-vs-edit-chart');
+      }
       return;
     }
+
+    chartContainer.innerHTML = '';
 
     // Calculer les totaux
     const totalScanTime = this.data.enrichedStats.reduce((sum, d) => sum + d.cumulativeScanningTime, 0) / 1_000_000;
@@ -591,88 +532,31 @@ export class App {
       { label: 'Temps d\'Édition', value: totalEditTime, color: '#ff6b35' }
     ];
 
-    // Dimensions agrandies
-    const containerElement = container.node() as HTMLElement;
-    const containerWidth = containerElement?.getBoundingClientRect().width || 600;
-    const width = Math.min(containerWidth - 40, 600);
-    const height = 500;
-    const radius = Math.min(width, height) / 2 - 60;
-
-    // Créer le SVG centré
-    const svg = container.append('svg')
-      .attr('class', 'chart-svg')
-      .attr('width', width)
-      .attr('height', height)
-      .style('display', 'block')
-      .style('margin', '0 auto');
-
-    const g = svg.append('g')
-      .attr('transform', `translate(${width / 2},${height / 2})`);
-
-    // Arc generator
-    const arc = d3.arc()
-      .innerRadius(radius * 0.4)
-      .outerRadius(radius);
-
-    // Arc pour les labels externes
-    const labelArc = d3.arc()
-      .innerRadius(radius + 20)
-      .outerRadius(radius + 20);
-
-    // Pie generator
-    const pie = d3.pie()
-      .value((d: any) => d.value)
-      .sort(null);
-
-    // Créer les secteurs
-    const arcs = g.selectAll('.arc')
-      .data(pie(pieData as any))
-      .enter().append('g')
-      .attr('class', 'arc');
-
-    arcs.append('path')
-      .attr('class', 'pie-slice')
-      .attr('d', arc as any)
-      .attr('fill', (d: any) => d.data.color)
-      .style('stroke', 'var(--panel-border)')
-      .style('stroke-width', '2px');
-
-    // Ajouter les labels externes
-    arcs.append('text')
-      .attr('class', 'chart-label')
-      .attr('transform', (d: any) => `translate(${labelArc.centroid(d)})`)
-      .attr('text-anchor', 'middle')
-      .style('fill', 'var(--text-primary)')
-      .style('font-weight', 'bold')
-      .style('font-size', '14px')
-      .text((d: any) => d.data.label);
-
-    // Ajouter les valeurs au centre des secteurs
-    arcs.append('text')
-      .attr('class', 'value-label')
-      .attr('transform', (d: any) => `translate(${arc.centroid(d)})`)
-      .attr('text-anchor', 'middle')
-      .style('fill', 'white')
-      .style('font-weight', 'bold')
-      .style('font-size', '12px')
-      .text((d: any) => `${d.data.value.toFixed(1)}ms`);
-
-    // Ajouter les pourcentages
-    arcs.append('text')
-      .attr('class', 'percentage-label')
-      .attr('transform', (d: any) => {
-        const centroid = arc.centroid(d);
-        return `translate(${centroid[0]}, ${centroid[1] + 15})`;
-      })
-      .attr('text-anchor', 'middle')
-      .style('fill', 'white')
-      .style('font-weight', 'bold')
-      .style('font-size', '11px')
-      .text((d: any) => {
-        const total = totalScanTime + totalEditTime;
-        const percentage = total > 0 ? ((d.data.value / total) * 100).toFixed(1) : '0';
-        return `${percentage}%`;
-      });
+    const chart = this.getOrCreateChart('scan-vs-edit-chart');
+    chart.setOption({
+      backgroundColor: 'transparent',
+      tooltip: {
+        trigger: 'item',
+        formatter: '{b}: {c}ms ({d}%)'
+      },
+      legend: {
+        bottom: 0,
+        textStyle: { color: '#cbd5e1' }
+      },
+      series: [
+        {
+          type: 'pie',
+          radius: ['40%', '72%'],
+          avoidLabelOverlap: true,
+          label: { color: '#e2e8f0', formatter: '{b}\n{d}%' },
+          data: pieData.map(item => ({
+            name: item.label,
+            value: Number(item.value.toFixed(1)),
+            itemStyle: { color: item.color }
+          }))
+        }
+      ]
+    });
   }
 
 
@@ -852,15 +736,20 @@ export class App {
    * Graphique des économies par recette avec différents types de visualisation
    */
   private async renderSavingsByRecipeChart(): Promise<void> {
-    const container = d3.select('#savings-by-recipe-chart');
-    container.selectAll('*').remove();
+    const chartContainer = document.getElementById('savings-by-recipe-chart');
+    if (!chartContainer) return;
 
     if (this.data.enrichedStats.length === 0) {
-      container.append('div')
-        .attr('class', 'chart-empty')
-        .text('Aucune donnée disponible');
+      chartContainer.innerHTML = '<div class="chart-empty">Aucune donnée disponible</div>';
+      const existingChart = this.chartInstances.get('savings-by-recipe-chart');
+      if (existingChart) {
+        existingChart.dispose();
+        this.chartInstances.delete('savings-by-recipe-chart');
+      }
       return;
     }
+
+    chartContainer.innerHTML = '';
 
     // Préparer les données pour le graphique
     const chartData = this.data.enrichedStats
@@ -872,235 +761,96 @@ export class App {
     const chartTypeSelector = document.getElementById('savings-chart-type') as HTMLSelectElement;
     const chartType = chartTypeSelector ? chartTypeSelector.value : 'bar';
 
-    // Rendu selon le type sélectionné
+    const chart = this.getOrCreateChart('savings-by-recipe-chart');
+
     switch (chartType) {
       case 'pie':
-        this.renderPieChart(container, chartData);
+        chart.setOption({
+          tooltip: { trigger: 'item' },
+          legend: { bottom: 0, textStyle: { color: '#cbd5e1' } },
+          series: [
+            {
+              type: 'pie',
+              radius: ['35%', '70%'],
+              data: chartData.map(d => ({
+                name: d.recipe.split('.').pop() || d.recipe,
+                value: d.totalTimeSaved
+              })),
+              label: { color: '#e2e8f0' }
+            }
+          ]
+        });
         break;
       case 'treemap':
-        this.renderTreemapChart(container, chartData);
+        chart.setOption({
+          tooltip: {
+            formatter: (params: any) => `${params.name}: ${this.dataProcessor.formatDuration(params.value || 0)}`
+          },
+          series: [
+            {
+              type: 'treemap',
+              data: chartData.map(d => ({
+                name: d.recipe.split('.').pop() || d.recipe,
+                value: d.totalTimeSaved
+              })),
+              breadcrumb: { show: false },
+              label: { color: '#f1f5f9' }
+            }
+          ]
+        });
         break;
       case 'bar':
       default:
-        this.renderBarChart(container, chartData);
+        chart.setOption({
+          tooltip: {
+            trigger: 'axis',
+            axisPointer: { type: 'shadow' },
+            formatter: (params: any) => {
+              const p = params[0];
+              return `${p.name}<br/>${this.dataProcessor.formatDuration(Number(p.value))}`;
+            }
+          },
+          grid: { left: 220, right: 20, top: 20, bottom: 30 },
+          xAxis: {
+            type: 'value',
+            axisLabel: {
+              color: '#94a3b8',
+              formatter: (v: number) => this.dataProcessor.formatDuration(v)
+            },
+            splitLine: { lineStyle: { color: 'rgba(148, 163, 184, 0.15)' } }
+          },
+          yAxis: {
+            type: 'category',
+            axisLabel: { color: '#cbd5e1' },
+            data: chartData.map(d => d.recipe.split('.').pop() || d.recipe)
+          },
+          series: [
+            {
+              type: 'bar',
+              data: chartData.map(d => d.totalTimeSaved),
+              itemStyle: { color: '#7c3aed' }
+            }
+          ]
+        });
         break;
     }
   }
 
-  /**
-   * Rendu du graphique en barres
-   */
-  private renderBarChart(container: d3.Selection<any, any, any, any>, chartData: RecipePerformanceMetrics[]): void {
-    // Dimensions
-    const margin = { top: 20, right: 30, bottom: 40, left: 150 };
-    const width = Math.max(800, container.node()?.getBoundingClientRect().width || 800) - margin.left - margin.right;
-    const height = 400 - margin.top - margin.bottom;
+  private getOrCreateChart(containerId: string): echarts.ECharts {
+    const element = document.getElementById(containerId) as HTMLDivElement | null;
+    if (!element) {
+      throw new Error(`Conteneur introuvable: ${containerId}`);
+    }
 
-    // Créer le SVG
-    const svg = container.append('svg')
-      .attr('width', width + margin.left + margin.right)
-      .attr('height', height + margin.top + margin.bottom);
+    const existing = this.chartInstances.get(containerId);
+    if (existing) {
+      existing.resize();
+      return existing;
+    }
 
-    const g = svg.append('g')
-      .attr('transform', `translate(${margin.left},${margin.top})`);
-
-    // Échelles
-    const yScale = d3.scaleBand()
-      .domain(chartData.map(d => d.recipe.split('.').pop() || d.recipe))
-      .range([0, height])
-      .padding(0.1);
-
-    const xScale = d3.scaleLinear()
-      .domain([0, d3.max(chartData, d => d.totalTimeSaved) || 0])
-      .range([0, width]);
-
-    // Échelle de couleurs
-    const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
-
-    // Axes
-    g.append('g')
-      .attr('class', 'axis y-axis')
-      .call(d3.axisLeft(yScale));
-
-    g.append('g')
-      .attr('class', 'axis x-axis')
-      .attr('transform', `translate(0,${height})`)
-      .call(d3.axisBottom(xScale).tickFormat(d => this.dataProcessor.formatDuration(Number(d))));
-
-    // Barres
-    g.selectAll('.bar')
-      .data(chartData)
-      .enter().append('rect')
-      .attr('class', 'bar savings')
-      .attr('y', d => yScale(d.recipe.split('.').pop() || d.recipe) || 0)
-      .attr('height', yScale.bandwidth())
-      .attr('x', 0)
-      .attr('width', d => xScale(d.totalTimeSaved))
-      .attr('fill', (_, i) => colorScale(i.toString()));
-
-    // Labels avec valeurs
-    g.selectAll('.bar-label')
-      .data(chartData)
-      .enter().append('text')
-      .attr('class', 'bar-label')
-      .attr('x', d => xScale(d.totalTimeSaved) + 5)
-      .attr('y', d => (yScale(d.recipe.split('.').pop() || d.recipe) || 0) + yScale.bandwidth() / 2)
-      .attr('dy', '0.35em')
-      .style('font-size', '12px')
-      .style('fill', 'var(--text-secondary)')
-      .text(d => this.dataProcessor.formatDuration(d.totalTimeSaved));
-  }
-
-  /**
-   * Rendu du graphique camembert
-   */
-  private renderPieChart(container: d3.Selection<any, any, any, any>, chartData: RecipePerformanceMetrics[]): void {
-    // Dimensions
-    const width = 500;
-    const height = 400;
-    const radius = Math.min(width, height) / 2 - 40;
-
-    // Créer le SVG
-    const svg = container.append('svg')
-      .attr('width', width)
-      .attr('height', height)
-      .style('margin', '0 auto')
-      .style('display', 'block');
-
-    const g = svg.append('g')
-      .attr('transform', `translate(${width / 2},${height / 2})`);
-
-    // Arc generator
-    const arc = d3.arc()
-      .innerRadius(0)
-      .outerRadius(radius);
-
-    // Arc pour les labels
-    const labelArc = d3.arc()
-      .innerRadius(radius + 10)
-      .outerRadius(radius + 10);
-
-    // Pie generator
-    const pie = d3.pie<RecipePerformanceMetrics>()
-      .value(d => d.totalTimeSaved)
-      .sort(null);
-
-    // Échelle de couleurs
-    const colorScale = d3.scaleOrdinal(d3.schemeSet3);
-
-    // Créer les secteurs
-    const arcs = g.selectAll('.arc')
-      .data(pie(chartData))
-      .enter().append('g')
-      .attr('class', 'arc');
-
-    arcs.append('path')
-      .attr('class', 'pie-slice')
-      .attr('d', arc as any)
-      .attr('fill', (_, i) => colorScale(i.toString()))
-      .style('stroke', 'var(--panel-border)')
-      .style('stroke-width', '2px');
-
-    // Ajouter les labels
-    arcs.append('text')
-      .attr('class', 'chart-label')
-      .attr('transform', (d: any) => `translate(${labelArc.centroid(d)})`)
-      .attr('text-anchor', 'middle')
-      .style('font-size', '12px')
-      .style('fill', 'var(--text-primary)')
-      .style('font-weight', 'bold')
-      .text((d: any) => {
-        const recipeName = d.data.recipe.split('.').pop() || d.data.recipe;
-        return recipeName.length > 12 ? recipeName.substring(0, 12) + '...' : recipeName;
-      });
-
-    // Ajouter les pourcentages au centre des secteurs
-    arcs.append('text')
-      .attr('class', 'percentage-label')
-      .attr('transform', (d: any) => `translate(${arc.centroid(d)})`)
-      .attr('text-anchor', 'middle')
-      .style('font-size', '10px')
-      .style('fill', 'white')
-      .style('font-weight', 'bold')
-      .text((d: any) => {
-        const total = chartData.reduce((sum, item) => sum + item.totalTimeSaved, 0);
-        const percentage = ((d.data.totalTimeSaved / total) * 100).toFixed(1);
-        return `${percentage}%`;
-      });
-  }
-
-  /**
-   * Rendu du graphique TreeMap
-   */
-  private renderTreemapChart(container: d3.Selection<any, any, any, any>, chartData: RecipePerformanceMetrics[]): void {
-    // Dimensions
-    const width = Math.max(800, container.node()?.getBoundingClientRect().width || 800);
-    const height = 400;
-
-    // Créer le SVG
-    const svg = container.append('svg')
-      .attr('width', width)
-      .attr('height', height);
-
-    // Préparer les données pour le treemap
-    const hierarchyData = {
-      name: 'root',
-      children: chartData.map(d => ({
-        name: d.recipe.split('.').pop() || d.recipe,
-        value: d.totalTimeSaved,
-        fullName: d.recipe
-      }))
-    };
-
-    // Créer la hiérarchie
-    const root = d3.hierarchy(hierarchyData)
-      .sum((d: any) => d.value || 0)
-      .sort((a, b) => (b.value || 0) - (a.value || 0));
-
-    // Créer le treemap
-    const treemap = d3.treemap<any>()
-      .size([width, height])
-      .padding(2)
-      .round(true);
-
-    treemap(root);
-
-    // Échelle de couleurs
-    const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
-
-    // Créer les rectangles
-    const leaf = svg.selectAll('g')
-      .data(root.leaves())
-      .enter().append('g')
-      .attr('transform', (d: any) => `translate(${d.x0},${d.y0})`);
-
-    leaf.append('rect')
-      .attr('class', 'treemap-rect')
-      .attr('width', (d: any) => d.x1 - d.x0)
-      .attr('height', (d: any) => d.y1 - d.y0)
-      .attr('fill', (_: any, i: number) => colorScale(i.toString()))
-      .style('stroke', 'var(--panel-border)')
-      .style('stroke-width', '2px')
-      .style('opacity', 0.8);
-
-    // Ajouter les labels
-    leaf.append('text')
-      .attr('class', 'treemap-label')
-      .attr('x', 4)
-      .attr('y', 16)
-      .style('font-size', '12px')
-      .style('font-weight', 'bold')
-      .style('fill', 'white')
-      .text((d: any) => d.data.name);
-
-    // Ajouter les valeurs
-    leaf.append('text')
-      .attr('class', 'treemap-value')
-      .attr('x', 4)
-      .attr('y', 32)
-      .style('font-size', '10px')
-      .style('fill', 'white')
-      .text((d: any) => this.dataProcessor.formatDuration(d.data.value));
+    const chart = echarts.init(element, undefined, { renderer: 'canvas' });
+    this.chartInstances.set(containerId, chart);
+    return chart;
   }
 
 

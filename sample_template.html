@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Elastic Discover Data View</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4211d4",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#151022",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(66, 17, 212, 0.3);
+            border-radius: 10px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased">
+<div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+<!-- Header -->
+<header class="sticky top-0 z-10 flex items-center bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md p-4 pb-2 justify-between border-b border-slate-200 dark:border-primary/20">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">menu</span>
+<h2 class="text-lg font-bold leading-tight tracking-tight">Discover</h2>
+</div>
+<div class="flex items-center gap-2">
+<button class="flex size-10 items-center justify-center rounded-lg hover:bg-slate-200 dark:hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined">calendar_today</span>
+</button>
+<button class="flex size-10 items-center justify-center rounded-lg hover:bg-slate-200 dark:hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+</header>
+<!-- KQL Query Bar -->
+<div class="px-4 py-3 bg-background-light dark:bg-background-dark">
+<label class="flex flex-col w-full">
+<div class="flex w-full items-stretch rounded-lg h-12 border border-slate-200 dark:border-primary/30 bg-white dark:bg-slate-900 shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-primary/50 transition-all">
+<div class="flex items-center justify-center pl-4 text-slate-400">
+<span class="material-symbols-outlined text-lg">search</span>
+</div>
+<input class="flex-1 bg-transparent border-none focus:ring-0 px-3 text-sm font-mono placeholder:text-slate-500" placeholder="Search (e.g. status: 200)" value='service.name: "auth-api" AND status: 500'/>
+<div class="flex items-center px-2 gap-1">
+<button class="p-1 text-slate-400 hover:text-primary">
+<span class="material-symbols-outlined">cancel</span>
+</button>
+<div class="h-6 w-px bg-slate-200 dark:bg-primary/20 mx-1"></div>
+<button class="px-3 py-1 bg-primary text-white text-xs font-bold rounded-md flex items-center gap-1">
+                            UPDATE
+                        </button>
+</div>
+</div>
+</label>
+</div>
+<!-- Filter Pills -->
+<div class="flex gap-2 px-4 pb-4 overflow-x-auto no-scrollbar">
+<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-white text-xs font-medium whitespace-nowrap">
+<span>Last 15 minutes</span>
+<span class="material-symbols-outlined text-sm">close</span>
+</div>
+<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-200 dark:bg-primary/20 text-slate-700 dark:text-slate-300 text-xs font-medium whitespace-nowrap border border-slate-300 dark:border-primary/40">
+<span>status: 500</span>
+<span class="material-symbols-outlined text-sm">filter_alt</span>
+</div>
+<button class="flex items-center gap-1 px-3 py-1.5 rounded-full border border-dashed border-slate-400 dark:border-primary/40 text-slate-500 dark:text-slate-400 text-xs font-medium whitespace-nowrap">
+<span class="material-symbols-outlined text-sm">add</span> Add Filter
+            </button>
+</div>
+<!-- Document Count Histogram -->
+<div class="px-4 py-4 border-t border-slate-200 dark:border-primary/20">
+<div class="flex justify-between items-end mb-4">
+<div class="flex flex-col">
+<span class="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest font-bold">Document count</span>
+<h3 class="text-3xl font-bold font-mono tracking-tighter">1,240 <span class="text-xs font-normal text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded ml-2">+12%</span></h3>
+</div>
+<div class="flex gap-1">
+<button class="p-1 rounded bg-slate-100 dark:bg-primary/10 text-primary">
+<span class="material-symbols-outlined text-sm">bar_chart</span>
+</button>
+<button class="p-1 rounded text-slate-400">
+<span class="material-symbols-outlined text-sm">show_chart</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-12 h-24 items-end gap-1 px-1">
+<div class="bg-primary/20 rounded-t-sm h-[30%]"></div>
+<div class="bg-primary/20 rounded-t-sm h-[45%]"></div>
+<div class="bg-primary/40 rounded-t-sm h-[60%]"></div>
+<div class="bg-primary/30 rounded-t-sm h-[40%]"></div>
+<div class="bg-primary/50 rounded-t-sm h-[75%]"></div>
+<div class="bg-primary/60 rounded-t-sm h-[90%]"></div>
+<div class="bg-primary rounded-t-sm h-[100%]"></div>
+<div class="bg-primary/70 rounded-t-sm h-[85%]"></div>
+<div class="bg-primary/50 rounded-t-sm h-[50%]"></div>
+<div class="bg-primary/30 rounded-t-sm h-[40%]"></div>
+<div class="bg-primary/20 rounded-t-sm h-[25%]"></div>
+<div class="bg-primary/10 rounded-t-sm h-[15%]"></div>
+</div>
+<div class="flex justify-between mt-2 text-[10px] font-mono text-slate-400 uppercase">
+<span>10:00:00 AM</span>
+<span>10:15:00 AM</span>
+</div>
+</div>
+<!-- Log Entries Section -->
+<div class="flex-1 flex flex-col bg-slate-50 dark:bg-slate-900/50 rounded-t-3xl border-t border-slate-200 dark:border-primary/20 mt-2">
+<div class="flex items-center justify-between px-4 py-4 border-b border-slate-200 dark:border-primary/10">
+<div class="flex gap-4">
+<button class="text-sm font-bold border-b-2 border-primary pb-1">Table</button>
+<button class="text-sm font-medium text-slate-500 dark:text-slate-400 pb-1">JSON</button>
+</div>
+<div class="text-xs text-slate-400 font-mono">Showing 100 of 1,240</div>
+</div>
+<!-- List of logs -->
+<div class="flex flex-col divide-y divide-slate-200 dark:divide-primary/10">
+<!-- Log Entry 1 -->
+<div class="p-4 bg-white dark:bg-background-dark/40">
+<div class="flex justify-between items-start mb-2">
+<span class="text-[10px] font-mono bg-slate-100 dark:bg-primary/20 text-slate-600 dark:text-primary px-1.5 py-0.5 rounded">Oct 24, 2023 @ 10:14:55</span>
+<span class="material-symbols-outlined text-slate-400 text-sm">unfold_more</span>
+</div>
+<div class="text-xs font-mono line-clamp-2 text-slate-700 dark:text-slate-300">
+<span class="text-red-500">ERROR</span> [auth-api] ConnectionTimeoutException: Failed to connect to database at 10.0.4.152:5432 after 5000ms.
+                    </div>
+</div>
+<!-- Expanded Log Entry (Visual Representation) -->
+<div class="p-4 bg-white dark:bg-background-dark/60 border-l-4 border-primary">
+<div class="flex justify-between items-start mb-3">
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-mono bg-primary text-white px-1.5 py-0.5 rounded">Oct 24, 2023 @ 10:14:50</span>
+<span class="text-[10px] uppercase font-bold text-red-500 tracking-wider">Status 500</span>
+</div>
+<span class="material-symbols-outlined text-primary text-sm">unfold_less</span>
+</div>
+<!-- KV Pairs -->
+<div class="space-y-1.5">
+<div class="flex gap-2 text-[11px] font-mono">
+<span class="text-slate-400 w-24 shrink-0">service.name</span>
+<span class="text-primary truncate">auth-api</span>
+</div>
+<div class="flex gap-2 text-[11px] font-mono">
+<span class="text-slate-400 w-24 shrink-0">host.ip</span>
+<span class="text-slate-200">10.0.4.152</span>
+</div>
+<div class="flex gap-2 text-[11px] font-mono">
+<span class="text-slate-400 w-24 shrink-0">http.method</span>
+<span class="text-slate-200 font-bold">POST</span>
+</div>
+<div class="flex gap-2 text-[11px] font-mono">
+<span class="text-slate-400 w-24 shrink-0">message</span>
+<span class="text-slate-200 italic">"Internal server error occurred during JWT validation..."</span>
+</div>
+</div>
+<div class="mt-4 flex gap-2">
+<button class="text-[10px] font-bold text-primary bg-primary/10 px-3 py-1.5 rounded uppercase">View Details</button>
+<button class="text-[10px] font-bold text-slate-400 px-3 py-1.5 rounded uppercase border border-slate-700">Filter In</button>
+</div>
+</div>
+<!-- Log Entry 3 -->
+<div class="p-4 bg-white dark:bg-background-dark/40 opacity-70">
+<div class="flex justify-between items-start mb-2">
+<span class="text-[10px] font-mono bg-slate-100 dark:bg-primary/20 text-slate-600 dark:text-primary px-1.5 py-0.5 rounded">Oct 24, 2023 @ 10:14:42</span>
+<span class="material-symbols-outlined text-slate-400 text-sm">unfold_more</span>
+</div>
+<div class="text-xs font-mono line-clamp-1 text-slate-700 dark:text-slate-300">
+<span class="text-red-500">ERROR</span> [auth-api] NullPointerException: user_id cannot be null...
+                    </div>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation Bar -->
+<nav class="sticky bottom-0 z-20 flex gap-2 border-t border-slate-200 dark:border-primary/30 bg-white/90 dark:bg-background-dark/95 backdrop-blur-lg px-4 pb-6 pt-3 shadow-lg">
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">explore</span>
+<p class="text-[10px] font-bold leading-normal tracking-tight">Discover</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<p class="text-[10px] font-medium leading-normal tracking-tight">Dashboards</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">monitoring</span>
+<p class="text-[10px] font-medium leading-normal tracking-tight">Logs</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">warning</span>
+<p class="text-[10px] font-medium leading-normal tracking-tight">Alerts</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-center gap-1 text-slate-500 dark:text-slate-400" href="#">
+<span class="material-symbols-outlined">settings</span>
+<p class="text-[10px] font-medium leading-normal tracking-tight">Settings</p>
+</a>
+</nav>
+</div>
+</body></html>

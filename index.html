@@ -3,26 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Migration Data Visualizer</title>
-    <link rel="stylesheet" href="css/main.css">
-    <link rel="stylesheet" href="css/visualizations.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Recipe Usage Reporting</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700&display=swap" rel="stylesheet">
 </head>
-<body>
-    <div id="app">
+<body class="app-shell">
+    <div id="app" class="elastic-shell">
         <!-- Header -->
-        <header class="header">
-            <div class="header-content">
-                <h1 class="app-title">
-                    <span class="logo">🔄</span>
-                    Migration Data Visualizer
-                </h1>
-                <div class="header-controls">
-                    <button id="refresh-data" class="btn btn-secondary">
-                        <span>↻</span> Actualiser
+        <header class="header elastic-header">
+            <div class="header-content elastic-header-content">
+                <div class="header-title-group">
+                    <h1 class="app-title">
+                        Recipe Usage Discover
+                    </h1>
+                </div>
+                <div class="header-controls elastic-header-controls">
+                    <button id="refresh-data" class="btn btn-secondary icon-btn" aria-label="Actualiser les données">
+                        <span class="material-symbols-outlined">refresh</span>
                     </button>
-                    <button id="export-data" class="btn btn-primary">
-                        <span>📊</span> Exporter
+                    <button id="export-data" class="btn btn-primary icon-btn" aria-label="Exporter les données">
+                        <span class="material-symbols-outlined">ios_share</span>
                     </button>
                 </div>
             </div>
@@ -39,7 +39,7 @@
         <!-- Main Content -->
         <main class="main-content">
             <!-- Navigation Tabs -->
-            <nav class="nav-tabs">
+            <nav class="nav-tabs elastic-tabs">
                 <button class="tab-button active" data-tab="usage">
                     <span>🧾</span> Reporting d'usage
                 </button>
