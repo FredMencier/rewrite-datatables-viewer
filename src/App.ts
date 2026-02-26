@@ -843,9 +843,15 @@ export class App {
     }
 
     const existing = this.chartInstances.get(containerId);
-    if (existing) {
+    if (existing && element.innerHTML.trim() !== '') {
+      // Le conteneur a du contenu, on redimensionne le graphique existant
       existing.resize();
       return existing;
+    }
+
+    // Le conteneur est vide ou l'instance n'existe pas, on crée un nouveau graphique
+    if (existing) {
+      existing.dispose();
     }
 
     const chart = echarts.init(element, undefined, { renderer: 'canvas' });
