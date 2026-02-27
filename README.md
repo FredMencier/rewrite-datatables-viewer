@@ -39,3 +39,4 @@ Scatter plots performance vs économies
 Infrastructure D3.js prête pour visualisations avancées
 Framework extensible pour ajouter nouvelles visualisations
 <!-- Bonjour -->
+<!-- Hello action -->
