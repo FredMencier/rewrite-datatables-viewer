@@ -25,7 +25,7 @@ jobs:
           ISSUE_BODY: ${{ github.event.issue.body }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
-          kilo run --model minimax/minimax-m2.5:free --auto "Fix the issue described in this issue $ISSUE_TITLE : $ISSUE_BODY"
+          kilo run --agent free --auto "Fix the issue described in this issue $ISSUE_TITLE : $ISSUE_BODY"
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
