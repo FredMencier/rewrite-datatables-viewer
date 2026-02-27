@@ -25,6 +25,7 @@ jobs:
           ISSUE_BODY: ${{ github.event.issue.body }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
+          kilo kilo models | grep min
           kilo run --model minimax-m2.5:free --auto "Fix the issue described in this issue $ISSUE_TITLE : $ISSUE_BODY"
 
       - name: Create Pull Request
