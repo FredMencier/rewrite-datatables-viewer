@@ -2,6 +2,7 @@ const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
+const { version } = require('./package.json');
 
 module.exports = (env, argv) => {
     const isProduction = argv.mode === 'production';
@@ -41,6 +42,9 @@ module.exports = (env, argv) => {
                 template: './index.html',
                 filename: 'index.html',
                 inject: 'body',
+                templateParameters: {
+                    version: version
+                },
                 minify: isProduction ? {
                     removeComments: true,
                     collapseWhitespace: true,
