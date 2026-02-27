@@ -2,7 +2,8 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - "kilocode-fix-/**"
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
@@ -22,6 +23,10 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      - name: Afficher la branche créée
+        run: |
+            echo "Nouvelle branche créée : ${{ github.event.ref }}"
+
       - name: Checkout
         uses: actions/checkout@v4
 
