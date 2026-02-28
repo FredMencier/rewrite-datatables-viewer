@@ -2,11 +2,8 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches:
-      - "kilocode-fix-/*"
     
   workflow_dispatch:
-
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
@@ -20,6 +17,12 @@ concurrency:
 
 jobs:
   build-and-deploy:
+    if: |
+      (github.event_name == 'push') ||
+      (github.event_name == 'create' &&
+       github.ref_type == 'branch' &&
+       startsWith(github.ref_name, 'kilocode-fix-'))
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
