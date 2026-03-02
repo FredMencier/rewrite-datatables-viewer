@@ -20,6 +20,7 @@ export class App {
   private chartInstances: Map<string, echarts.ECharts> = new Map();
   private currentTab: string = 'usage';
   private recipeIdFilters: string[] = [];
+  private selectedRepositoryPath: string = 'all';
   private data: {
     recipeStats: RecipeRunStats[];
     sourceResults: SourceFileResults[];
@@ -268,15 +269,155 @@ export class App {
       return;
     }
 
+    // Extraire les repositoryPath uniques
+    const repositoryPaths = [...new Set(this.data.usageReport.map(entry => entry.repositoryPath))];
+    repositoryPaths.sort();
+
+    // Wrapper principal
     const wrapper = document.createElement('section');
     wrapper.className = 'chart-container full-width';
 
+    // Ajouter les cartes KPI et le filtre
+    const kpiSection = document.createElement('section');
+    kpiSection.className = 'kpi-cards';
+
+    // Carte pour le temps économisé
+    const timeSavedCard = document.createElement('div');
+    timeSavedCard.className = 'kpi-card';
+    
+    // Utiliser le même format que l'onglet vue d'ensemble (formatDuration)
+    // Le temps économisé dans usageReport est en minutes (timeSavingsInMinutes)
+    const totalMinutes = this.data.usageReport.reduce((sum, entry) => sum + (entry.timeSavingsInMinutes || 0), 0);
+    const formattedTimeSaved = this.dataProcessor.formatDuration(totalMinutes * 60); // Convertir minutes en secondes
+    
+    timeSavedCard.innerHTML = `
+      <div class="kpi-icon">⏱️</div>
+      <div class="kpi-content">
+        <div class="kpi-value" id="usage-time-saved">${formattedTimeSaved}</div>
+        <div class="kpi-label">Temps Total Économisé</div>
+      </div>
+    `;
+    kpiSection.appendChild(timeSavedCard);
+
+    // Carte pour le nombre de repositories
+    const reposCard = document.createElement('div');
+    reposCard.className = 'kpi-card';
+    reposCard.innerHTML = `
+      <div class="kpi-icon">📁</div>
+      <div class="kpi-content">
+        <div class="kpi-value" id="usage-repos-count">${repositoryPaths.length}</div>
+        <div class="kpi-label">Repositories</div>
+      </div>
+    `;
+    kpiSection.appendChild(reposCard);
+
+    // Carte pour le nombre de fichiers modifiés
+    const totalFilesChanged = this.data.usageReport.reduce((sum, entry) => sum + (entry.totalFilesChanges || 0), 0);
+    const filesCard = document.createElement('div');
+    filesCard.className = 'kpi-card';
+    filesCard.innerHTML = `
+      <div class="kpi-icon">📝</div>
+      <div class="kpi-content">
+        <div class="kpi-value" id="usage-files-changed">${totalFilesChanged}</div>
+        <div class="kpi-label">Fichiers Modifiés</div>
+      </div>
+    `;
+    kpiSection.appendChild(filesCard);
+
+    // Carte pour le temps de runtime total
+    const totalRuntimeMs = this.data.usageReport.reduce((sum, entry) => sum + (entry.recipeRunInMilliseconds || 0), 0);
+    const totalRuntimeMinutes = Math.round(totalRuntimeMs / 60000);
+    const runtimeCard = document.createElement('div');
+    runtimeCard.className = 'kpi-card';
+    runtimeCard.innerHTML = `
+      <div class="kpi-icon">⏱️</div>
+      <div class="kpi-content">
+        <div class="kpi-value" id="usage-lines-count">${totalRuntimeMinutes} min</div>
+        <div class="kpi-label">Runtime Total</div>
+      </div>
+    `;
+    kpiSection.appendChild(runtimeCard);
+
+    wrapper.appendChild(kpiSection);
+
+    // Section de filtre repositoryPath
+    const filterSection = document.createElement('section');
+    filterSection.className = 'chart-container full-width';
+    filterSection.style.marginTop = '1rem';
+
+    const filterCard = document.createElement('div');
+    filterCard.className = 'chart-card';
+
+    const filterHeader = document.createElement('div');
+    filterHeader.className = 'chart-header';
+    filterHeader.innerHTML = `<h3>Filtrer par Repository</h3>`;
+
+    const filterBody = document.createElement('div');
+    filterBody.className = 'chart-body';
+    filterBody.style.padding = '1rem';
+
+    // Combobox pour repositoryPath
+    const selectContainer = document.createElement('div');
+    selectContainer.style.display = 'flex';
+    selectContainer.style.gap = '1rem';
+    selectContainer.style.alignItems = 'center';
+    selectContainer.style.flexWrap = 'wrap';
+
+    const selectLabel = document.createElement('label');
+    selectLabel.textContent = 'Repository:';
+    selectLabel.style.fontWeight = '600';
+    selectLabel.style.color = 'var(--text-secondary)';
+
+    const repositorySelect = document.createElement('select');
+    repositorySelect.id = 'repository-path-select';
+    repositorySelect.className = 'repository-select';
+    repositorySelect.style.padding = '0.5rem';
+    repositorySelect.style.borderRadius = '4px';
+    repositorySelect.style.border = '1px solid #60a5fa';
+    repositorySelect.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+    repositorySelect.style.color = 'var(--text-primary)';
+    repositorySelect.style.minWidth = '300px';
+    repositorySelect.style.fontSize = '0.875rem';
+
+    // Option "Tous les repositories"
+    const allOption = document.createElement('option');
+    allOption.value = 'all';
+    allOption.textContent = 'Tous les repositories';
+    repositorySelect.appendChild(allOption);
+
+    // Options pour chaque repositoryPath
+    repositoryPaths.forEach(path => {
+      const option = document.createElement('option');
+      option.value = path;
+      option.textContent = path;
+      repositorySelect.appendChild(option);
+    });
+
+    // Restaurer la sélection précédente
+    if (this.selectedRepositoryPath !== 'all') {
+      repositorySelect.value = this.selectedRepositoryPath;
+    }
+
+    // Gestionnaire de changement
+    repositorySelect.addEventListener('change', () => {
+      this.selectedRepositoryPath = repositorySelect.value;
+      this.refreshUsageTabData(container);
+    });
+
+    selectContainer.appendChild(selectLabel);
+    selectContainer.appendChild(repositorySelect);
+    filterBody.appendChild(selectContainer);
+    filterCard.appendChild(filterHeader);
+    filterCard.appendChild(filterBody);
+    filterSection.appendChild(filterCard);
+    wrapper.appendChild(filterSection);
+
+    // Tableau des données
     const card = document.createElement('div');
     card.className = 'chart-card';
 
     const header = document.createElement('div');
     header.className = 'chart-header';
-    header.innerHTML = `<h3>Usage report (usage-report.csv) - ${this.data.usageReport.length} lignes</h3>`;
 
     const body = document.createElement('div');
     body.className = 'chart-body';
@@ -292,6 +433,53 @@ export class App {
     container.appendChild(wrapper);
 
     this.renderUsageReportTable(tableContainer, this.data.usageReport);
+  }
+
+  /**
+   * Met à jour les données de l'onglet usage (temps économisé et tableau)
+   */
+  private refreshUsageTabData(container: HTMLElement): void {
+    // Filtrer les données selon le repositoryPath sélectionné
+    const filteredData = this.selectedRepositoryPath === 'all'
+      ? this.data.usageReport
+      : this.data.usageReport.filter(entry => entry.repositoryPath === this.selectedRepositoryPath);
+
+    // Mettre à jour le temps économisé (même format que vue d'ensemble)
+    const totalMinutesFiltered = filteredData.reduce((sum, entry) => sum + (entry.timeSavingsInMinutes || 0), 0);
+    const formattedTimeSaved = this.dataProcessor.formatDuration(totalMinutesFiltered * 60); // Convertir minutes en secondes
+    
+    const timeSavedElement = document.getElementById('usage-time-saved');
+    if (timeSavedElement) {
+      timeSavedElement.textContent = formattedTimeSaved;
+    }
+
+    // Mettre à jour le temps de runtime total
+    const filteredRuntimeMs = filteredData.reduce((sum, entry) => sum + (entry.recipeRunInMilliseconds || 0), 0);
+    const filteredRuntimeMinutes = Math.round(filteredRuntimeMs / 60000);
+    const linesElement = document.getElementById('usage-lines-count');
+    if (linesElement) {
+      linesElement.textContent = `${filteredRuntimeMinutes} min`;
+    }
+
+    // Mettre à jour le nombre de fichiers modifiés
+    const totalFilesChangedFiltered = filteredData.reduce((sum, entry) => sum + (entry.totalFilesChanges || 0), 0);
+    const filesChangedElement = document.getElementById('usage-files-changed');
+    if (filesChangedElement) {
+      filesChangedElement.textContent = totalFilesChangedFiltered.toString();
+    }
+
+    // Mettre à jour le titre du tableau
+    const headerTitle = container.querySelector('.chart-header h3');
+    if (headerTitle) {
+      const repoText = this.selectedRepositoryPath === 'all' ? '' : ` - ${this.selectedRepositoryPath}`;
+      headerTitle.textContent = `Usage report (usage-report.csv) - ${filteredData.length} lignes${repoText}`;
+    }
+
+    // Raffraîchir le tableau
+    const tableContainer = container.querySelector('.usage-table-container');
+    if (tableContainer) {
+      this.refreshUsageTable(tableContainer as HTMLElement, filteredData);
+    }
   }
 
   /**
