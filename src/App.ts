@@ -1,4 +1,3 @@
-import * as d3 from 'd3';
 import * as echarts from 'echarts';
 import { DataLoader } from './services/DataLoader';
 import { DataProcessor } from './services/DataProcessor';
@@ -249,6 +248,88 @@ export class App {
   }
 
   /**
+   * Graphique camembert du temps économisé par repository
+   */
+  private renderUsagePieChart(container: HTMLElement, usageData: UsageReportEntry[]): void {
+    // Calculer le temps économisé par repository
+    const repoTimeMap = new Map<string, number>();
+    usageData.forEach(entry => {
+      const repo = entry.repositoryPath;
+      const timeSaved = entry.timeSavingsInMinutes || 0;
+      repoTimeMap.set(repo, (repoTimeMap.get(repo) || 0) + timeSaved);
+    });
+
+    // Trier par temps économisé décroissant
+    const sortedData = Array.from(repoTimeMap.entries())
+      .sort((a, b) => b[1] - a[1]);
+
+    // Couleurs pour le graphique
+    const colors = [
+      '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+      '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1'
+    ];
+
+    const pieData = sortedData.map(([repo, minutes], index) => ({
+      name: repo,
+      value: minutes,
+      itemStyle: { color: colors[index % colors.length] }
+    }));
+
+    // Ne garder que les repos avec un temps économisé > 0
+    const filteredPieData = pieData.filter(d => d.value > 0);
+
+    if (filteredPieData.length === 0) {
+      container.innerHTML = '<div class="chart-empty">Aucune donnée de temps économisé disponible</div>';
+      return;
+    }
+
+    const chart = this.getOrCreateChart('usage-pie-chart');
+    chart.setOption({
+      backgroundColor: 'transparent',
+      tooltip: {
+        trigger: 'item',
+        formatter: (params: any) => {
+          return `${params.name}<br/>Temps économisé: ${params.value} min (${params.percent}%)`;
+        }
+      },
+      legend: {
+        orient: 'horizontal',
+        bottom: 0,
+        textStyle: { color: '#cbd5e1' },
+        formatter: (name: string) => {
+          const item = filteredPieData.find(d => d.name === name);
+          return item ? `${name}: ${item.value} min` : name;
+        }
+      },
+      series: [
+        {
+          type: 'pie',
+          radius: ['30%', '70%'],
+          avoidLabelOverlap: true,
+          itemStyle: {
+            borderRadius: 4,
+            borderColor: '#1e293b',
+            borderWidth: 2
+          },
+          label: {
+            show: true,
+            color: '#e2e8f0',
+            formatter: '{b}: {c} min'
+          },
+          emphasis: {
+            label: {
+              show: true,
+              fontSize: 14,
+              fontWeight: 'bold'
+            }
+          },
+          data: filteredPieData
+        }
+      ]
+    });
+  }
+
+  /**
    * Rendu de l'onglet Reporting d'usage (page d'accueil)
    */
   private async renderUsageTab(): Promise<void> {
@@ -333,35 +414,24 @@ export class App {
       <div class="kpi-icon">⏱️</div>
       <div class="kpi-content">
         <div class="kpi-value" id="usage-lines-count">${totalRuntimeMinutes} min</div>
-        <div class="kpi-label">Runtime Total</div>
+        <div class="kpi-label">Recipes Runtime Total</div>
       </div>
     `;
     kpiSection.appendChild(runtimeCard);
 
     wrapper.appendChild(kpiSection);
 
-    // Section de filtre repositoryPath
+    // Section de filtre repositoryPath (sans chart-card, sans chart-body)
     const filterSection = document.createElement('section');
     filterSection.className = 'chart-container full-width';
     filterSection.style.marginTop = '1rem';
 
-    const filterCard = document.createElement('div');
-    filterCard.className = 'chart-card';
-
-    const filterHeader = document.createElement('div');
-    filterHeader.className = 'chart-header';
-    filterHeader.innerHTML = `<h3>Filtrer par Repository</h3>`;
-
-    const filterBody = document.createElement('div');
-    filterBody.className = 'chart-body';
-    filterBody.style.padding = '1rem';
-
-    // Combobox pour repositoryPath
     const selectContainer = document.createElement('div');
     selectContainer.style.display = 'flex';
     selectContainer.style.gap = '1rem';
     selectContainer.style.alignItems = 'center';
     selectContainer.style.flexWrap = 'wrap';
+    selectContainer.style.margin = '1rem';
 
     const selectLabel = document.createElement('label');
     selectLabel.textContent = 'Repository:';
@@ -406,11 +476,30 @@ export class App {
 
     selectContainer.appendChild(selectLabel);
     selectContainer.appendChild(repositorySelect);
-    filterBody.appendChild(selectContainer);
-    filterCard.appendChild(filterHeader);
-    filterCard.appendChild(filterBody);
-    filterSection.appendChild(filterCard);
+    filterSection.appendChild(selectContainer);
     wrapper.appendChild(filterSection);
+
+    // Graphique camembert dans un chart-card séparé
+    const pieChartSection = document.createElement('section');
+    pieChartSection.className = 'chart-container full-width';
+    pieChartSection.style.marginTop = '0.5rem';
+
+    const pieChartCard = document.createElement('div');
+    pieChartCard.className = 'chart-card';
+
+    const pieChartBody = document.createElement('div');
+    pieChartBody.className = 'chart-body';
+    pieChartBody.style.height = '250px';
+
+    const pieChartContainer = document.createElement('div');
+    pieChartContainer.id = 'usage-pie-chart';
+    pieChartContainer.style.width = '100%';
+    pieChartContainer.style.height = '100%';
+
+    pieChartBody.appendChild(pieChartContainer);
+    pieChartCard.appendChild(pieChartBody);
+    pieChartSection.appendChild(pieChartCard);
+    wrapper.appendChild(pieChartSection);
 
     // Tableau des données
     const card = document.createElement('div');
@@ -431,6 +520,9 @@ export class App {
     card.appendChild(body);
     wrapper.appendChild(card);
     container.appendChild(wrapper);
+
+    // Rendu initial du graphique camembert (après ajout au DOM)
+    this.renderUsagePieChart(pieChartContainer, this.data.usageReport);
 
     this.renderUsageReportTable(tableContainer, this.data.usageReport);
   }
@@ -473,6 +565,12 @@ export class App {
     if (headerTitle) {
       const repoText = this.selectedRepositoryPath === 'all' ? '' : ` - ${this.selectedRepositoryPath}`;
       headerTitle.textContent = `Usage report (usage-report.csv) - ${filteredData.length} lignes${repoText}`;
+    }
+
+    // Raffraîchir le graphique camembert
+    const pieChartContainer = document.getElementById('usage-pie-chart');
+    if (pieChartContainer) {
+      this.renderUsagePieChart(pieChartContainer, filteredData);
     }
 
     // Raffraîchir le tableau
@@ -948,49 +1046,57 @@ export class App {
   private async renderFilesTab(): Promise<void> {
     console.log('Rendu de l\'onglet Fichiers');
     
-    const container = d3.select('#file-changes-chart');
-    container.selectAll('*').remove();
+    const container = document.getElementById('file-changes-chart');
+    if (!container) return;
+    
+    container.innerHTML = '';
 
     if (this.data.sourceResults.length === 0) {
-      container.append('div')
-        .attr('class', 'chart-empty')
-        .text('Aucun fichier modifié trouvé');
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'chart-empty';
+      emptyDiv.textContent = 'Aucun fichier modifié trouvé';
+      container.appendChild(emptyDiv);
       return;
     }
 
     // Créer le conteneur principal
-    const filesContainer = container.append('div')
-      .attr('class', 'files-container');
+    const filesContainer = document.createElement('div');
+    filesContainer.className = 'files-container';
 
     // Titre et statistiques
-    const headerDiv = filesContainer.append('div')
-      .attr('class', 'files-header');
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'files-header';
 
-    headerDiv.append('h3')
-      .attr('class', 'files-title')
-      .text(`Fichiers Modifiés (${this.data.sourceResults.length})`);
+    const title = document.createElement('h3');
+    title.className = 'files-title';
+    title.textContent = `Fichiers Modifiés (${this.data.sourceResults.length})`;
+    headerDiv.appendChild(title);
 
     // Champ de filtre
-    const filterContainer = headerDiv.append('div')
-      .attr('class', 'filter-container');
+    const filterContainer = document.createElement('div');
+    filterContainer.className = 'filter-container';
 
-    const filterInput = filterContainer.append('input')
-      .attr('type', 'text')
-      .attr('class', 'file-filter')
-      .attr('placeholder', 'Filtrer les fichiers...')
-      .attr('id', 'file-filter-input');
+    const filterInput = document.createElement('input');
+    filterInput.type = 'text';
+    filterInput.className = 'file-filter';
+    filterInput.placeholder = 'Filtrer les fichiers...';
+    filterInput.id = 'file-filter-input';
+
+    filterContainer.appendChild(filterInput);
+    headerDiv.appendChild(filterContainer);
+    filesContainer.appendChild(headerDiv);
 
     // Conteneur du tableau
-    const tableContainer = filesContainer.append('div')
-      .attr('class', 'files-table-container');
+    const tableContainer = document.createElement('div');
+    tableContainer.className = 'files-table-container';
 
     // Créer le tableau
-    const table = tableContainer.append('table')
-      .attr('class', 'files-table');
+    const table = document.createElement('table');
+    table.className = 'files-table';
 
     // En-tête du tableau
-    const thead = table.append('thead');
-    const headerRow = thead.append('tr');
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
     
     const headers = [
       { key: 'file', label: 'Fichier', sortable: true },
@@ -1000,25 +1106,32 @@ export class App {
     ];
 
     headers.forEach(header => {
-      const th = headerRow.append('th')
-        .attr('class', header.sortable ? 'sortable' : '')
-        .text(header.label);
-        
+      const th = document.createElement('th');
       if (header.sortable) {
-        th.style('cursor', 'pointer')
-          .on('click', () => this.sortFilesTable(header.key));
+        th.className = 'sortable';
+        th.style.cursor = 'pointer';
+        th.addEventListener('click', () => this.sortFilesTable(header.key));
       }
+      th.textContent = header.label;
+      headerRow.appendChild(th);
     });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
 
     // Corps du tableau
-    const tbody = table.append('tbody')
-      .attr('id', 'files-table-body');
+    const tbody = document.createElement('tbody');
+    tbody.id = 'files-table-body';
 
     // Remplir le tableau
     this.renderFilesTableRows(tbody, this.data.sourceResults);
 
+    table.appendChild(tbody);
+    tableContainer.appendChild(table);
+    filesContainer.appendChild(tableContainer);
+    container.appendChild(filesContainer);
+
     // Gestionnaire de filtre
-    filterInput.on('input', (event) => {
+    filterInput.addEventListener('input', (event) => {
       const filterValue = (event.target as HTMLInputElement).value.toLowerCase();
       const filteredData = this.data.sourceResults.filter(item => {
         const filePath = item.sourcePathAfter || item.sourcePathBefore || '';
@@ -1027,7 +1140,7 @@ export class App {
                recipe.toLowerCase().includes(filterValue);
       });
       
-      tbody.selectAll('*').remove();
+      tbody.innerHTML = '';
       this.renderFilesTableRows(tbody, filteredData);
     });
   }
@@ -1035,45 +1148,46 @@ export class App {
   /**
    * Rendu des lignes du tableau des fichiers
    */
-  private renderFilesTableRows(tbody: d3.Selection<any, any, any, any>, data: SourceFileResults[]): void {
-    const rows = tbody.selectAll('tr')
-      .data(data)
-      .enter().append('tr')
-      .attr('class', 'file-row');
+  private renderFilesTableRows(tbody: HTMLTableSectionElement, data: SourceFileResults[]): void {
+    data.forEach(d => {
+      const tr = document.createElement('tr');
+      tr.className = 'file-row';
 
-    // Colonne fichier
-    rows.append('td')
-      .attr('class', 'file-path')
-      .html(d => {
-        const path = d.sourcePathAfter || d.sourcePathBefore || 'N/A';
-        const fileName = path.split('/').pop() || path;
-        const directory = path.substring(0, path.lastIndexOf('/'));
-        
-        return `
-          <div class="file-info">
-            <div class="file-name">${fileName}</div>
-            ${directory ? `<div class="file-directory">${directory}</div>` : ''}
-          </div>
-        `;
-      });
+      // Colonne fichier
+      const fileTd = document.createElement('td');
+      fileTd.className = 'file-path';
+      const path = d.sourcePathAfter || d.sourcePathBefore || 'N/A';
+      const fileName = path.split('/').pop() || path;
+      const directory = path.substring(0, path.lastIndexOf('/'));
+      fileTd.innerHTML = `
+        <div class="file-info">
+          <div class="file-name">${fileName}</div>
+          ${directory ? `<div class="file-directory">${directory}</div>` : ''}
+        </div>
+      `;
+      tr.appendChild(fileTd);
 
-    // Colonne recette
-    rows.append('td')
-      .attr('class', 'recipe-name')
-      .text(d => {
-        const recipeParts = d.recipeChanges.split('.');
-        return recipeParts[recipeParts.length - 1] || d.recipeChanges;
-      });
+      // Colonne recette
+      const recipeTd = document.createElement('td');
+      recipeTd.className = 'recipe-name';
+      const recipeParts = d.recipeChanges.split('.');
+      recipeTd.textContent = recipeParts[recipeParts.length - 1] || d.recipeChanges;
+      tr.appendChild(recipeTd);
 
-    // Colonne temps économisé
-    rows.append('td')
-      .attr('class', 'time-saved')
-      .text(d => this.dataProcessor.formatDuration(d.estimatedTimeSaving));
+      // Colonne temps économisé
+      const timeTd = document.createElement('td');
+      timeTd.className = 'time-saved';
+      timeTd.textContent = this.dataProcessor.formatDuration(d.estimatedTimeSaving);
+      tr.appendChild(timeTd);
 
-    // Colonne cycle
-    rows.append('td')
-      .attr('class', 'cycle-number')
-      .text(d => d.cycle?.toString() || 'N/A');
+      // Colonne cycle
+      const cycleTd = document.createElement('td');
+      cycleTd.className = 'cycle-number';
+      cycleTd.textContent = d.cycle?.toString() || 'N/A';
+      tr.appendChild(cycleTd);
+
+      tbody.appendChild(tr);
+    });
   }
 
   /**
@@ -1101,8 +1215,8 @@ export class App {
         break;
     }
 
-    const tbody = d3.select('#files-table-body');
-    tbody.selectAll('*').remove();
+    const tbody = document.getElementById('files-table-body') as HTMLTableSectionElement;
+    tbody.innerHTML = '';
     this.renderFilesTableRows(tbody, sortedData);
   }
 
