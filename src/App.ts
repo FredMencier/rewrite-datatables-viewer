@@ -19,6 +19,7 @@ export class App {
   private dataProcessor: DataProcessor;
   private chartInstances: Map<string, echarts.ECharts> = new Map();
   private currentTab: string = 'usage';
+  private recipeIdFilters: string[] = [];
   private data: {
     recipeStats: RecipeRunStats[];
     sourceResults: SourceFileResults[];
@@ -303,6 +304,104 @@ export class App {
     const meta = document.createElement('div');
     meta.className = 'usage-meta';
 
+    const filterContainer = document.createElement('div');
+    filterContainer.className = 'recipe-filter-container';
+    filterContainer.style.marginBottom = '1rem';
+    filterContainer.style.display = 'flex';
+    filterContainer.style.gap = '0.5rem';
+    filterContainer.style.alignItems = 'center';
+    filterContainer.style.flexWrap = 'wrap';
+
+    const filterInput = document.createElement('input');
+    filterInput.type = 'text';
+    filterInput.className = 'recipe-filter-input';
+    filterInput.placeholder = 'Filtrer par recipeId...';
+    filterInput.style.padding = '0.5rem';
+    filterInput.style.borderRadius = '4px';
+    filterInput.style.border = '1px solid #60a5fa';
+    filterInput.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+    filterInput.style.color = 'var(--text-primary)';
+
+    const addButton = document.createElement('button');
+    addButton.textContent = 'Ajouter';
+    addButton.className = 'recipe-filter-add-btn';
+    addButton.style.padding = '0.5rem 1rem';
+    addButton.style.borderRadius = '4px';
+    addButton.style.border = 'none';
+    addButton.style.backgroundColor = '#60a5fa';
+    addButton.style.color = 'white';
+    addButton.style.cursor = 'pointer';
+    addButton.style.fontWeight = '600';
+
+    const filterTagsContainer = document.createElement('div');
+    filterTagsContainer.className = 'recipe-filter-tags';
+    filterTagsContainer.style.display = 'flex';
+    filterTagsContainer.style.gap = '0.5rem';
+    filterTagsContainer.style.flexWrap = 'wrap';
+    filterTagsContainer.style.marginTop = '0.5rem';
+
+    const updateFilterTags = (): void => {
+      filterTagsContainer.innerHTML = '';
+      this.recipeIdFilters.forEach((filterValue, index) => {
+        const tag = document.createElement('span');
+        tag.className = 'recipe-filter-tag';
+        tag.style.display = 'inline-flex';
+        tag.style.alignItems = 'center';
+        tag.style.gap = '0.5rem';
+        tag.style.padding = '0.25rem 0.5rem';
+        tag.style.backgroundColor = 'rgba(96, 165, 250, 0.2)';
+        tag.style.border = '1px solid #60a5fa';
+        tag.style.borderRadius = '4px';
+        tag.style.color = 'var(--text-primary)';
+        tag.style.fontSize = '0.875rem';
+
+        const tagText = document.createElement('span');
+        tagText.textContent = filterValue;
+        tag.appendChild(tagText);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = '×';
+        removeBtn.className = 'recipe-filter-remove';
+        removeBtn.style.background = 'none';
+        removeBtn.style.border = 'none';
+        removeBtn.style.color = '#60a5fa';
+        removeBtn.style.cursor = 'pointer';
+        removeBtn.style.fontSize = '1.25rem';
+        removeBtn.style.lineHeight = '1';
+        removeBtn.style.padding = '0';
+        removeBtn.addEventListener('click', () => {
+          this.recipeIdFilters.splice(index, 1);
+          updateFilterTags();
+          this.refreshUsageTable(container, usageData);
+        });
+        tag.appendChild(removeBtn);
+
+        filterTagsContainer.appendChild(tag);
+      });
+    };
+
+    addButton.addEventListener('click', () => {
+      const value = filterInput.value.trim();
+      if (value && !this.recipeIdFilters.includes(value)) {
+        this.recipeIdFilters.push(value);
+        filterInput.value = '';
+        updateFilterTags();
+        this.refreshUsageTable(container, usageData);
+      }
+    });
+
+    filterInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        addButton.click();
+      }
+    });
+
+    filterContainer.appendChild(filterInput);
+    filterContainer.appendChild(addButton);
+    filterContainer.appendChild(filterTagsContainer);
+
+    container.appendChild(filterContainer);
+
     const table = document.createElement('table');
     table.className = 'usage-table';
 
@@ -352,7 +451,11 @@ export class App {
     thead.appendChild(headerRow);
 
     const tbody = document.createElement('tbody');
-    usageData.forEach((row, index) => {
+    const filteredData = this.recipeIdFilters.length > 0
+      ? usageData.filter(row => this.recipeIdFilters.includes(row.recipeId))
+      : usageData;
+    
+    filteredData.forEach((row, index) => {
       const tr = document.createElement('tr');
       tr.className = 'usage-row';
 
@@ -370,7 +473,98 @@ export class App {
       tbody.appendChild(tr);
     });
 
-    meta.textContent = `Colonnes: ${columns.length} | Lignes: ${usageData.length}`;
+    meta.textContent = `Colonnes: ${columns.length} | Lignes: ${filteredData.length}${this.recipeIdFilters.length > 0 ? ` (filtrées de ${usageData.length})` : ''}`;
+
+    table.appendChild(thead);
+    table.appendChild(tbody);
+    container.appendChild(meta);
+    container.appendChild(table);
+  }
+
+  /**
+   * Rafraîchit le tableau d'usage avec les filtres actifs
+   */
+  private refreshUsageTable(container: HTMLElement, usageData: UsageReportEntry[]): void {
+    const existingTable = container.querySelector('table.usage-table');
+    const existingMeta = container.querySelector('.usage-meta');
+    
+    if (existingTable) existingTable.remove();
+    if (existingMeta) existingMeta.remove();
+
+    const columns: Array<{ key: keyof UsageReportEntry; label: string }> = [
+      { key: 'runId', label: 'runId' },
+      { key: 'recipeId', label: 'recipeId' },
+      { key: 'organizationId', label: 'organizationId' },
+      { key: 'recipeRunState', label: 'recipeRunState' },
+      { key: 'repositoryOrigin', label: 'repositoryOrigin' },
+      { key: 'repositoryPath', label: 'repositoryPath' },
+      { key: 'repositoryBranch', label: 'repositoryBranch' },
+      { key: 'recipeRunUserEmail', label: 'recipeRunUserEmail' },
+      { key: 'errorMarkers', label: 'errorMarkers' },
+      { key: 'warningMarkers', label: 'warningMarkers' },
+      { key: 'infoMarkers', label: 'infoMarkers' },
+      { key: 'debugMarkers', label: 'debugMarkers' },
+      { key: 'totalFilesResults', label: 'totalFilesResults' },
+      { key: 'totalFilesSearched', label: 'totalFilesSearched' },
+      { key: 'totalFilesChanges', label: 'totalFilesChanges' },
+      { key: 'timeSavingsInMinutes', label: 'timeSavingsInMinutes' },
+      { key: 'astLoadInMilliseconds', label: 'astLoadInMilliseconds' },
+      { key: 'recipeRunInMilliseconds', label: 'recipeRunInMilliseconds' },
+      { key: 'dependencyResolutionInMilliseconds', label: 'dependencyResolutionInMilliseconds' },
+      { key: 'recipeRunCreatedAt', label: 'recipeRunCreatedAt' },
+      { key: 'recipeRunUpdatedAt', label: 'recipeRunUpdatedAt' },
+      { key: 'stack', label: 'stack' },
+      { key: 'priority', label: 'priority' },
+      { key: 'commitId', label: 'commitId' },
+      { key: 'type', label: 'type' },
+      { key: 'commitState', label: 'commitState' },
+      { key: 'commitUserEmail', label: 'commitUserEmail' },
+      { key: 'commitModifiedAt', label: 'commitModifiedAt' }
+    ];
+
+    const filteredData = this.recipeIdFilters.length > 0
+      ? usageData.filter(row => this.recipeIdFilters.includes(row.recipeId))
+      : usageData;
+
+    const table = document.createElement('table');
+    table.className = 'usage-table';
+
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+
+    const indexHeader = document.createElement('th');
+    indexHeader.textContent = '#';
+    headerRow.appendChild(indexHeader);
+
+    columns.forEach(({ label }) => {
+      const th = document.createElement('th');
+      th.textContent = label;
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+
+    const tbody = document.createElement('tbody');
+    filteredData.forEach((row, index) => {
+      const tr = document.createElement('tr');
+      tr.className = 'usage-row';
+
+      const indexCell = document.createElement('td');
+      indexCell.textContent = String(index + 1);
+      tr.appendChild(indexCell);
+
+      columns.forEach(({ key }) => {
+        const td = document.createElement('td');
+        const value = row[key];
+        td.textContent = value === null || value === undefined ? '' : String(value);
+        tr.appendChild(td);
+      });
+
+      tbody.appendChild(tr);
+    });
+
+    const meta = document.createElement('div');
+    meta.className = 'usage-meta';
+    meta.textContent = `Colonnes: ${columns.length} | Lignes: ${filteredData.length}${this.recipeIdFilters.length > 0 ? ` (filtrées de ${usageData.length})` : ''}`;
 
     table.appendChild(thead);
     table.appendChild(tbody);
