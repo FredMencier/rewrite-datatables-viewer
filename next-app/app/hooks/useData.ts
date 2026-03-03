@@ -45,7 +45,8 @@ export function useData() {
   });
 
   const loadData = useCallback(async () => {
-    // Reset loading states
+    // Clear cache and reset loading states
+    dataLoader.clearCache();
     setRecipeStats(prev => ({ ...prev, isLoading: true, error: null }));
     setSourceResults(prev => ({ ...prev, isLoading: true, error: null }));
     setUsageReport(prev => ({ ...prev, isLoading: true, error: null }));
@@ -55,7 +56,7 @@ export function useData() {
       const [stats, results, report] = await Promise.all([
         dataLoader.loadRecipeRunStats(),
         dataLoader.loadSourceFileResults(),
-        dataLoader.loadUsageReport()
+        dataLoader.loadAllUsageReports()
       ]);
 
       setRecipeStats({ data: stats, isLoading: false, error: null });

@@ -38,6 +38,8 @@ interface UsageDashboardProps {
 
 const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false }) => {
   const [selectedRepo, setSelectedRepo] = useState<string>('all');
+  const [recipeFilter, setRecipeFilter] = useState<string>('');
+  const [recipeFilters, setRecipeFilters] = useState<string[]>([]);
 
   // Obtenir la liste des repositories uniques
   const repositories = useMemo(() => {
@@ -45,11 +47,43 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
     return Array.from(repos).sort();
   }, [data]);
 
-  // Filtrer les données par repository
+  // Filtrer les donnees par repository et par recipe (exclusion)
   const filteredData = useMemo(() => {
-    if (selectedRepo === 'all') return data;
-    return data.filter(d => d.repositoryPath === selectedRepo);
-  }, [data, selectedRepo]);
+    let result = data;
+    
+    // Filter by repository
+    if (selectedRepo !== 'all') {
+      result = result.filter(d => d.repositoryPath === selectedRepo);
+    }
+    
+    // Exclude by recipe (filter OUT these recipes)
+    if (recipeFilters.length > 0) {
+      result = result.filter(d => !recipeFilters.includes(d.recipeId));
+    }
+    
+    return result;
+  }, [data, selectedRepo, recipeFilters]);
+
+  // Ajouter un filtre de recipe (exclusion)
+  const handleAddRecipeFilter = () => {
+    const value = recipeFilter.trim();
+    if (value && !recipeFilters.includes(value)) {
+      setRecipeFilters([...recipeFilters, value]);
+      setRecipeFilter('');
+    }
+  };
+
+  // Supprimer un filtre de recipe
+  const handleRemoveRecipeFilter = (filterToRemove: string) => {
+    setRecipeFilters(recipeFilters.filter(f => f !== filterToRemove));
+  };
+
+  // Gerer l'appui sur Entree dans le champ de saisie
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleAddRecipeFilter();
+    }
+  };
 
   // Calculer les KPIs
   const kpis = useMemo(() => {
@@ -66,7 +100,7 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
     };
   }, [filteredData]);
 
-  // Préparer les données pour le graphique camembert (fichiers modifiés par repository)
+  // Preparer les donnees pour le graphique camembert (fichiers modifies par repository)
   const filesByRepoData = useMemo(() => {
     const repoFilesMap = new Map<string, number>();
     
@@ -78,10 +112,10 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
     return Array.from(repoFilesMap.entries())
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
-      .slice(0, 10); // Limiter à 10 pour la lisibilité
+      .slice(0, 10); // Limiter a 10 pour la lisibilite
   }, [filteredData]);
 
-  // Préparer les données pour le graphique camembert (temps économisé par repository)
+  // Preparer les donnees pour le graphique camembert (temps economise par repository)
   const pieChartData = useMemo(() => {
     const repoTimeMap = new Map<string, number>();
     
@@ -93,12 +127,12 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
     return Array.from(repoTimeMap.entries())
       .map(([name, value]) => ({ name, value: Math.round(value) }))
       .sort((a, b) => b.value - a.value)
-      .slice(0, 10); // Limiter à 10 pour la lisibilité
+      .slice(0, 10); // Limiter a 10 pour la lisibilite
   }, [filteredData]);
 
-  // Préparer les données pour le tableau
+  // Preparer les donnees pour le tableau
   const tableData = useMemo(() => {
-    return filteredData.slice(0, 100); // Limiter à 100 entrées
+    return filteredData.slice(0, 100); // Limiter a 100 entrees
   }, [filteredData]);
 
   // Formater le temps
@@ -159,7 +193,7 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
         <KPICard
           icon={<ClockIcon />}
           value={formatTime(kpis.timeSaved)}
-          label="Temps économisé"
+          label="Temps economise"
           subtitle="total"
         />
         <KPICard
@@ -171,13 +205,13 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
         <KPICard
           icon={<FileIcon />}
           value={kpis.filesChanged.toLocaleString()}
-          label="Fichiers modifiés"
+          label="Fichiers modifies"
           subtitle="total"
         />
         <KPICard
           icon={<LightningIcon />}
           value={formatTime(kpis.runtime)}
-          label="Temps d'exécution"
+          label="Temps d'execution"
           subtitle="total"
         />
       </div>
@@ -185,8 +219,8 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
       {/* Graphique camembert */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ChartCard
-          title="Temps économisé par repository"
-          subtitle="Répartition du temps économisé (top 10)"
+          title="Temps economise par repository"
+          subtitle="Repartition du temps economise (top 10)"
         >
           {pieChartData.length > 0 ? (
             <PieChart
@@ -214,14 +248,14 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
             />
           ) : (
             <div className="flex items-center justify-center h-[350px] text-gray-500">
-              Aucune donnée disponible
+              Aucune donnee disponible
             </div>
           )}
         </ChartCard>
 
         <ChartCard
-          title="Fichiers modifiés par repository"
-          subtitle="Répartition des fichiers modifiés (top 10)"
+          title="Fichiers modifies par repository"
+          subtitle="Repartition des fichiers modifies (top 10)"
         >
           {filesByRepoData.length > 0 ? (
             <PieChart
@@ -249,17 +283,61 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
             />
           ) : (
             <div className="flex items-center justify-center h-[350px] text-gray-500">
-              Aucune donnée disponible
+              Aucune donnee disponible
             </div>
           )}
         </ChartCard>
       </div>
 
-      {/* Tableau des données */}
+      {/* Tableau des donnees avec filtre */}
       <ChartCard
-        title="Historique des exécutions"
-        subtitle={`${filteredData.length} exécutions`}
+        title="Historique des executions"
+        subtitle={`${filteredData.length} executions${recipeFilters.length > 0 ? ` (exclu de ${data.length})` : ''}`}
       >
+        {/* Filtre d'exclusion par recipe */}
+        <div className="mb-4 flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <label htmlFor="recipe-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Exclure recipe:
+            </label>
+            <input
+              id="recipe-filter"
+              type="text"
+              value={recipeFilter}
+              onChange={(e) => setRecipeFilter(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="recipeId a exclure..."
+              className="mt-1 block w-full max-w-xs pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            />
+            <button
+              onClick={handleAddRecipeFilter}
+              className="mt-1 px-3 py-2 text-sm font-medium rounded-md bg-red-600 hover:bg-red-700 text-white"
+            >
+              Exclure
+            </button>
+          </div>
+        </div>
+        
+        {/* Tags des filtres d'exclusion */}
+        {recipeFilters.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {recipeFilters.map((filter) => (
+              <span
+                key={filter}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-sm"
+              >
+                Exclu: {filter}
+                <button
+                  onClick={() => handleRemoveRecipeFilter(filter)}
+                  className="ml-1 text-red-600 hover:text-red-800 dark:text-red-300 dark:hover:text-red-100"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-900">
@@ -280,7 +358,7 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
                   Fichiers
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Temps économisé
+                  Temps economise
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Runtime
@@ -321,7 +399,7 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
         {filteredData.length > 100 && (
           <div className="mt-4 flex justify-center">
             <span className="text-sm text-gray-500">
-              Affichage des 100 premières entrées sur {filteredData.length}
+              Affichage des 100 premieres entrees sur {filteredData.length}
             </span>
           </div>
         )}

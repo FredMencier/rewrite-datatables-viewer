@@ -79,12 +79,30 @@ export class DataLoader {
    * Charge un fichier CSV depuis le chemin donné
    */
   private async fetchCSV(filePath: string): Promise<Record<string, string>[]> {
-    const response = await fetch(filePath);
+    // Add timestamp to bypass browser cache
+    const separator = filePath.includes('?') ? '&' : '?';
+    const url = `${filePath}${separator}_t=${Date.now()}`;
+    
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Erreur HTTP: ${response.status} pour ${filePath}`);
     }
     const text = await response.text();
     return this.parseCSV(text);
+  }
+
+  /**
+   * Charge un fichier JSON
+   */
+  private async fetchJSON(filePath: string): Promise<any> {
+    const separator = filePath.includes('?') ? '&' : '?';
+    const url = `${filePath}${separator}_t=${Date.now()}`;
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erreur HTTP: ${response.status} pour ${filePath}`);
+    }
+    return response.json();
   }
 
   /**
@@ -171,53 +189,117 @@ export class DataLoader {
 
     try {
       const csvData = await this.fetchCSV(filePath);
-
-      const parsedData: UsageReportEntry[] = csvData.map(row => {
-        return {
-          runId: this.parseString(row['runId']),
-          recipeId: this.parseString(row['recipeId']),
-          organizationId: this.parseString(row['organizationId']),
-          recipeRunState: this.parseString(row['recipeRunState']),
-          repositoryOrigin: this.parseString(row['repositoryOrigin']),
-          repositoryPath: this.parseString(row['repositoryPath']),
-          repositoryBranch: this.parseString(row['repositoryBranch']),
-          recipeRunUserEmail: this.parseString(row['recipeRunUserEmail']),
-          errorMarkers: this.parseNumber(row['errorMarkers']),
-          warningMarkers: this.parseNumber(row['warningMarkers']),
-          infoMarkers: this.parseNumber(row['infoMarkers']),
-          debugMarkers: this.parseNumber(row['debugMarkers']),
-          totalFilesResults: this.parseNumber(row['totalFilesResults']),
-          totalFilesSearched: this.parseNumber(row['totalFilesSearched']),
-          totalFilesChanges: this.parseNumber(row['totalFilesChanges']),
-          timeSavingsInMinutes: this.parseNumber(row['timeSavingsInMinutes']),
-          astLoadInMilliseconds: this.parseNumber(row['astLoadInMilliseconds']),
-          recipeRunInMilliseconds: this.parseNumber(row['recipeRunInMilliseconds']),
-          dependencyResolutionInMilliseconds: this.parseNumber(row['dependencyResolutionInMilliseconds']),
-          recipeRunCreatedAt: this.parseString(row['recipeRunCreatedAt']),
-          recipeRunUpdatedAt: this.parseString(row['recipeRunUpdatedAt']),
-          stack: this.parseString(row['stack']),
-          priority: this.parseString(row['priority']),
-          commitId: this.parseStringOrNull(row['commitId']),
-          type: this.parseStringOrNull(row['type']),
-          commitState: this.parseStringOrNull(row['commitState']),
-          commitUserEmail: this.parseStringOrNull(row['commitUserEmail']),
-          commitModifiedAt: this.parseStringOrNull(row['commitModifiedAt'])
-        };
-      }).filter(item => {
-        if (!item.runId || !item.recipeId) {
-          return false;
-        }
-
-        const commitState = (item.commitState || '').trim().toUpperCase();
-        return commitState === 'COMPLETED';
-      });
-
-      this.cache.set(cacheKey, parsedData);
-      return parsedData;
+      return this.parseUsageReportData(csvData, cacheKey);
     } catch (error) {
       console.error('Erreur lors du chargement des données usage-report:', error);
       throw new Error(`Impossible de charger les données depuis ${filePath}: ${error}`);
     }
+  }
+
+  /**
+   * Charge tous les fichiers usage-report-<timestamp>.csv et combine les donnees
+   */
+  public async loadAllUsageReports(): Promise<UsageReportEntry[]> {
+    const cacheKey = 'usage-report-all';
+
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey) as UsageReportEntry[];
+    }
+
+    try {
+      let usageReportFiles: string[] = [];
+
+      // Charger le manifest pour obtenir la liste des fichiers
+      try {
+        const manifest = await this.fetchJSON('/data/manifest.json');
+        if (manifest && manifest.usageReports) {
+          usageReportFiles = manifest.usageReports.map((filename: string) => `/data/${filename}`);
+        }
+      } catch (e) {
+        // Si le manifest n'existe pas, utiliser le fichier par defaut
+        console.warn('Manifest non trouve, utilisation du fichier par defaut');
+      }
+
+      // Si aucun fichier dans le manifest, utiliser le fichier par defaut
+      if (usageReportFiles.length === 0) {
+        usageReportFiles = ['/data/usage-report-1772437230910.csv'];
+      }
+
+      const allData: UsageReportEntry[] = [];
+
+      for (const filePath of usageReportFiles) {
+        try {
+          const csvData = await this.fetchCSV(filePath);
+          const parsedData = this.parseUsageReportData(csvData, '');
+          allData.push(...parsedData);
+        } catch (error) {
+          // Ignorer les fichiers non trouves
+        }
+      }
+
+      // Trier par date de creation (plus recent en premier)
+      allData.sort((a, b) => {
+        const dateA = new Date(a.recipeRunCreatedAt || '').getTime();
+        const dateB = new Date(b.recipeRunCreatedAt || '').getTime();
+        return dateB - dateA;
+      });
+
+      this.cache.set(cacheKey, allData);
+      return allData;
+    } catch (error) {
+      console.error('Erreur lors du chargement de tous les usage reports:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Parse les données usage-report CSV
+   */
+  private parseUsageReportData(csvData: Record<string, string>[], cacheKey: string): UsageReportEntry[] {
+    const parsedData: UsageReportEntry[] = csvData.map(row => {
+      return {
+        runId: this.parseString(row['runId']),
+        recipeId: this.parseString(row['recipeId']),
+        organizationId: this.parseString(row['organizationId']),
+        recipeRunState: this.parseString(row['recipeRunState']),
+        repositoryOrigin: this.parseString(row['repositoryOrigin']),
+        repositoryPath: this.parseString(row['repositoryPath']),
+        repositoryBranch: this.parseString(row['repositoryBranch']),
+        recipeRunUserEmail: this.parseString(row['recipeRunUserEmail']),
+        errorMarkers: this.parseNumber(row['errorMarkers']),
+        warningMarkers: this.parseNumber(row['warningMarkers']),
+        infoMarkers: this.parseNumber(row['infoMarkers']),
+        debugMarkers: this.parseNumber(row['debugMarkers']),
+        totalFilesResults: this.parseNumber(row['totalFilesResults']),
+        totalFilesSearched: this.parseNumber(row['totalFilesSearched']),
+        totalFilesChanges: this.parseNumber(row['totalFilesChanges']),
+        timeSavingsInMinutes: this.parseNumber(row['timeSavingsInMinutes']),
+        astLoadInMilliseconds: this.parseNumber(row['astLoadInMilliseconds']),
+        recipeRunInMilliseconds: this.parseNumber(row['recipeRunInMilliseconds']),
+        dependencyResolutionInMilliseconds: this.parseNumber(row['dependencyResolutionInMilliseconds']),
+        recipeRunCreatedAt: this.parseString(row['recipeRunCreatedAt']),
+        recipeRunUpdatedAt: this.parseString(row['recipeRunUpdatedAt']),
+        stack: this.parseString(row['stack']),
+        priority: this.parseString(row['priority']),
+        commitId: this.parseStringOrNull(row['commitId']),
+        type: this.parseStringOrNull(row['type']),
+        commitState: this.parseStringOrNull(row['commitState']),
+        commitUserEmail: this.parseStringOrNull(row['commitUserEmail']),
+        commitModifiedAt: this.parseStringOrNull(row['commitModifiedAt'])
+      };
+    }).filter(item => {
+      if (!item.runId || !item.recipeId) {
+        return false;
+      }
+
+      const commitState = (item.commitState || '').trim().toUpperCase();
+      return commitState === 'COMPLETED';
+    });
+
+    if (cacheKey) {
+      this.cache.set(cacheKey, parsedData);
+    }
+    return parsedData;
   }
 
   /**
