@@ -2,6 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  output: 'export',
   // Configuration pour copier les fichiers CSV
   webpack: (config, { isServer }) => {
     if (!isServer) {
