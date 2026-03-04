@@ -58,7 +58,7 @@ const PieChart: React.FC<PieChartProps> = ({
       backgroundColor: 'transparent',
       tooltip: {
         trigger: 'item',
-        formatter: tooltipFormatter || '{b}: {c} ({d}%)',
+        formatter: tooltipFormatter ? (params) => tooltipFormatter(params) : '{b}: {c} ({d}%)',
         backgroundColor: 'rgba(255, 255, 255, 0.95)',
         borderColor: '#e5e7eb',
         borderWidth: 1,

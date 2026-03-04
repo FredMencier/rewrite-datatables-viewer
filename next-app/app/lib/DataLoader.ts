@@ -1,5 +1,8 @@
 import { RecipeRunStats, SourceFileResults, UsageReportEntry } from '../types';
 
+// Base path pour les fichiers de donnees
+const BASE_PATH = '/rewrite-datatables-viewer';
+
 /**
  * Service responsable du chargement et parsing des fichiers CSV OpenRewrite
  * Utilise fetch pour charger les fichiers CSV
@@ -81,7 +84,7 @@ export class DataLoader {
   private async fetchCSV(filePath: string): Promise<Record<string, string>[]> {
     // Add timestamp to bypass browser cache
     const separator = filePath.includes('?') ? '&' : '?';
-    const url = `${filePath}${separator}_t=${Date.now()}`;
+    const url = `${BASE_PATH}${filePath}${separator}_t=${Date.now()}`;
     
     const response = await fetch(url);
     if (!response.ok) {
@@ -96,7 +99,7 @@ export class DataLoader {
    */
   private async fetchJSON(filePath: string): Promise<any> {
     const separator = filePath.includes('?') ? '&' : '?';
-    const url = `${filePath}${separator}_t=${Date.now()}`;
+    const url = `${BASE_PATH}${filePath}${separator}_t=${Date.now()}`;
     
     const response = await fetch(url);
     if (!response.ok) {

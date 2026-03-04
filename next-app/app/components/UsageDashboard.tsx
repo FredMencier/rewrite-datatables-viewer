@@ -136,8 +136,16 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
     return filteredData.slice(0, 100); // Limiter a 100 entrees
   }, [filteredData]);
 
-  // Formater le temps
+  // Formater le temps (heures et minutes)
   const formatTime = (minutes: number): string => {
+    if (minutes < 60) return `${Math.round(minutes)} min`;
+    const hours = Math.floor(minutes / 60);
+    const mins = Math.round(minutes % 60);
+    return `${hours}h ${mins}min`;
+  };
+
+  // Formater le temps pour le tooltip du graphique
+  const formatTimeTooltip = (minutes: number): string => {
     if (minutes < 60) return `${Math.round(minutes)} min`;
     const hours = Math.floor(minutes / 60);
     const mins = Math.round(minutes % 60);
@@ -231,6 +239,10 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
               legendPosition="bottom"
               labelShow={true}
               labelFormatter="{b}: {c} min"
+              tooltipFormatter={(params) => {
+                const value = params.value as number;
+                return `${params.name}: ${formatTimeTooltip(value)}`;
+              }}
               borderRadius={4}
               borderColor="#1e293b"
               borderWidth={2}
