@@ -44,7 +44,7 @@ jobs:
       - name: Go to App directory
         run: |
             pwd
-            ls
+            cd ./next-app
         
       - name: Install dependencies
         run: npm ci
