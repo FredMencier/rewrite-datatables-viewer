@@ -5,6 +5,7 @@ import { UsageReportEntry } from '../types';
 import KPICard from './KPICard';
 import ChartCard from './ChartCard';
 import PieChart from './PieChart';
+import BarChart from './BarChart';
 
 // Icônes SVG pour les KPIs
 const ClockIcon = () => (
@@ -258,16 +259,10 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
           subtitle="Repartition des fichiers modifies (top 10)"
         >
           {filesByRepoData.length > 0 ? (
-            <PieChart
+            <BarChart
               data={filesByRepoData}
+              horizontal={true}
               height={350}
-              radius={['30%', '70%']}
-              legendPosition="bottom"
-              labelShow={true}
-              labelFormatter="{b}: {c} fichiers"
-              borderRadius={4}
-              borderColor="#1e293b"
-              borderWidth={2}
               colors={[
                 '#3b82f6',
                 '#10b981',

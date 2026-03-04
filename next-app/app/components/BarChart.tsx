@@ -104,14 +104,17 @@ const BarChart: React.FC<BarChartProps> = ({
             ? data.map((item) => item.value)
             : data.map((item) => item.value),
           itemStyle: {
-            color: colors?.[0] || '#3b82f6',
+            color: (params: { dataIndex: number }) => {
+              const index = params.dataIndex;
+              return colors?.[index] || colors?.[0] || '#3b82f6';
+            },
             borderRadius: horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0],
           },
           label: {
             show: showValues,
             position: horizontal ? 'right' : 'top',
             formatter: '{c}',
-            color: '#6b7280',
+            color: '#e2e8f0',
             fontSize: 11,
           },
           emphasis: {
