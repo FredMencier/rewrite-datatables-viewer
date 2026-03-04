@@ -3,6 +3,8 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   output: 'export',
+  basePath: '/rewrite-datatables-viewer',
+  assetPrefix: '/rewrite-datatables-viewer/',
   // Configuration pour copier les fichiers CSV
   webpack: (config, { isServer }) => {
     if (!isServer) {
