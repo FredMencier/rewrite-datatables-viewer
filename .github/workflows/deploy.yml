@@ -55,7 +55,7 @@ jobs:
       - name: Deploy to GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist
+          path: ./next-app/out
 
       - name: Deploy
         uses: actions/deploy-pages@v4
