@@ -51,9 +51,9 @@ export default function Home() {
 
   // Définition des onglets
   const tabs: TabItem[] = [
-    { id: 'usage', label: 'General Usage', icon: <LightningIcon /> },
-    { id: 'overview', label: 'Vue d\'ensemble', icon: <HomeIcon /> },
-    { id: 'performance', label: 'Performance', icon: <ChartIcon /> },
+    { id: 'usage', label: 'General Usage', icon: <HomeIcon /> },
+    { id: 'overview', label: 'Vue d\'ensemble', icon: <ChartIcon /> },
+    { id: 'performance', label: 'Performance', icon: <LightningIcon /> },
     { id: 'files', label: 'Fichiers', icon: <FileIcon /> },
     { id: 'recipes', label: 'Recettes', icon: <BeakerIcon /> },
   ];
@@ -66,6 +66,7 @@ export default function Home() {
             recipeStats={recipeStats || []}
             sourceResults={sourceResults || []}
             roiMetrics={roiMetrics}
+            enrichedStats={enrichedStats || []}
             isLoading={isLoading}
           />
         );
