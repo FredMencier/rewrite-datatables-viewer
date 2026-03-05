@@ -60,7 +60,7 @@ const NightingaleChart: React.FC<NightingaleChartProps> = ({
           itemStyle: {
             borderRadius: 5,
             borderColor: '#fff',
-            borderWidth: 2,
+            borderWidth: 1,
           },
           label: {
             show: false,

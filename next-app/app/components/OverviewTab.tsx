@@ -138,7 +138,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         </ChartCard>
 
         <ChartCard
-          title="Fichiers modifies par recette"
+          title="Nombre de fichiers modifies par recette"
           subtitle="Top 10 des recettes avec le plus de modifications"
         >
           {fileChangeData.length > 0 ? (
@@ -167,6 +167,9 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                   Recette
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Scan (ms)
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Temps (ms)
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -182,6 +185,9 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                 <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white max-w-xs truncate">
                     {row.recipe}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white text-right">
+                    {formatTimeMs(row.cumulativeScanningTime / 1000000)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white text-right">
                     {formatTimeMs(row.totalExecutionTimeMs)}

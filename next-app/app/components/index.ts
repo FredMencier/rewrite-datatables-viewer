@@ -13,6 +13,5 @@ export { default as UsageDashboard } from './UsageDashboard';
 
 // Composants pour les autres onglets
 export { default as OverviewTab } from './OverviewTab';
-export { default as PerformanceTab } from './PerformanceTab';
 export { default as FilesTab } from './FilesTab';
 export { default as RecipesTab } from './RecipesTab';

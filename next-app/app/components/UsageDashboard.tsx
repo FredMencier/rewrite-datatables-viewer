@@ -267,7 +267,7 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
         </ChartCard>
 
         <ChartCard
-          title="Fichiers modifies par repository"
+          title="Nombre de fichiers modifies par repository"
           subtitle="Repartition des fichiers modifies (top 10)"
         >
           {filesByRepoData.length > 0 ? (

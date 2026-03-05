@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAllData } from './hooks/useData';
-import { Tabs, TabItem, UsageDashboard, OverviewTab, PerformanceTab, FilesTab, RecipesTab } from './components';
+import { Tabs, TabItem, UsageDashboard, OverviewTab, FilesTab, RecipesTab } from './components';
 
 // Icônes SVG pour les onglets
 const HomeIcon = () => (
@@ -17,11 +17,6 @@ const ChartIcon = () => (
   </svg>
 );
 
-const LightningIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-  </svg>
-);
 
 const FileIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -52,8 +47,7 @@ export default function Home() {
   // Définition des onglets
   const tabs: TabItem[] = [
     { id: 'usage', label: 'General Usage', icon: <HomeIcon /> },
-    { id: 'overview', label: 'Vue d\'ensemble', icon: <ChartIcon /> },
-    { id: 'performance', label: 'Performance', icon: <LightningIcon /> },
+    { id: 'overview', label: 'Performance', icon: <ChartIcon /> },
     { id: 'files', label: 'Fichiers', icon: <FileIcon /> },
     { id: 'recipes', label: 'Recettes', icon: <BeakerIcon /> },
   ];
@@ -74,13 +68,6 @@ export default function Home() {
         return (
           <UsageDashboard
             data={usageReport || []}
-            isLoading={isLoading}
-          />
-        );
-      case 'performance':
-        return (
-          <PerformanceTab
-            enrichedStats={enrichedStats || []}
             isLoading={isLoading}
           />
         );
