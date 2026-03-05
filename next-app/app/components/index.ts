@@ -6,7 +6,6 @@ export { default as ChartCard } from './ChartCard';
 // Composants de graphiques (utilisant echarts)
 export { default as PieChart } from './PieChart';
 export { default as BarChart } from './BarChart';
-export { default as TimeSeriesChart } from './TimeSeriesChart';
 
 // Composants pour l'onglet Usage
 export { default as UsageDashboard } from './UsageDashboard';

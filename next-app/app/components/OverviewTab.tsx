@@ -1,16 +1,14 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { RecipeRunStats, SourceFileResults, ROIMetrics, RecipePerformanceMetrics } from '../types';
+import { RecipeRunStats, ROIMetrics, RecipePerformanceMetrics } from '../types';
 import KPICard from './KPICard';
 import ChartCard from './ChartCard';
-import LineChart from './LineChart';
 import Treemap from './Treemap';
 import NightingaleChart from './NightingaleChart';
 
 interface OverviewTabProps {
   recipeStats: RecipeRunStats[];
-  sourceResults: SourceFileResults[];
   roiMetrics: ROIMetrics | null;
   enrichedStats: RecipePerformanceMetrics[];
   isLoading?: boolean;
@@ -37,7 +35,6 @@ const BeakerIcon = () => (
 
 const OverviewTab: React.FC<OverviewTabProps> = ({
   recipeStats,
-  sourceResults,
   roiMetrics,
   enrichedStats,
   isLoading = false,

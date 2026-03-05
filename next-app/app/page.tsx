@@ -58,7 +58,6 @@ export default function Home() {
         return (
           <OverviewTab
             recipeStats={recipeStats || []}
-            sourceResults={sourceResults || []}
             roiMetrics={roiMetrics}
             enrichedStats={enrichedStats || []}
             isLoading={isLoading}
