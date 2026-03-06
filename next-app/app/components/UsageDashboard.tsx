@@ -39,8 +39,35 @@ interface UsageDashboardProps {
 
 const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false }) => {
   const [selectedRepo, setSelectedRepo] = useState<string>('all');
-  const [recipeFilter, setRecipeFilter] = useState<string>('');
-  const [recipeFilters, setRecipeFilters] = useState<string[]>([]);
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+
+  // Initialize selectedRows with all runIds when data changes
+  React.useEffect(() => {
+    const allRunIds = new Set(data.map(d => d.runId));
+    setSelectedRows(allRunIds);
+  }, [data]);
+
+  // Handle select all
+  const handleSelectAll = () => {
+    if (selectedRows.size === filteredData.length) {
+      // If all are selected, deselect all
+      setSelectedRows(new Set());
+    } else {
+      // Otherwise select all
+      setSelectedRows(new Set(filteredData.map(d => d.runId)));
+    }
+  };
+
+  // Handle individual row toggle
+  const handleToggleRow = (runId: string) => {
+    const newSelected = new Set(selectedRows);
+    if (newSelected.has(runId)) {
+      newSelected.delete(runId);
+    } else {
+      newSelected.add(runId);
+    }
+    setSelectedRows(newSelected);
+  };
 
   // Obtenir la liste des repositories uniques
   const repositories = useMemo(() => {
@@ -48,7 +75,7 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
     return Array.from(repos).sort();
   }, [data]);
 
-  // Filtrer les donnees par repository et par recipe (exclusion)
+  // Filtrer les donnees par repository
   const filteredData = useMemo(() => {
     let result = data;
     
@@ -57,41 +84,16 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
       result = result.filter(d => d.repositoryPath === selectedRepo);
     }
     
-    // Exclude by recipe (filter OUT these recipes)
-    if (recipeFilters.length > 0) {
-      result = result.filter(d => !recipeFilters.includes(d.recipeId));
-    }
-    
     return result;
-  }, [data, selectedRepo, recipeFilters]);
+  }, [data, selectedRepo]);
 
-  // Ajouter un filtre de recipe (exclusion)
-  const handleAddRecipeFilter = () => {
-    const value = recipeFilter.trim();
-    if (value && !recipeFilters.includes(value)) {
-      setRecipeFilters([...recipeFilters, value]);
-      setRecipeFilter('');
-    }
-  };
-
-  // Supprimer un filtre de recipe
-  const handleRemoveRecipeFilter = (filterToRemove: string) => {
-    setRecipeFilters(recipeFilters.filter(f => f !== filterToRemove));
-  };
-
-  // Gerer l'appui sur Entree dans le champ de saisie
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleAddRecipeFilter();
-    }
-  };
-
-  // Calculer les KPIs
+  // Calculer les KPIs en fonction des lignes selectionnees
   const kpis = useMemo(() => {
-    const totalTimeSaved = filteredData.reduce((acc, d) => acc + d.timeSavingsInMinutes, 0);
-    const totalRepos = new Set(filteredData.map(d => d.repositoryPath)).size;
-    const totalFilesChanged = filteredData.reduce((acc, d) => acc + d.totalFilesChanges, 0);
-    const totalRuntime = filteredData.reduce((acc, d) => acc + d.recipeRunInMilliseconds, 0);
+    const selectedData = filteredData.filter(d => selectedRows.has(d.runId));
+    const totalTimeSaved = selectedData.reduce((acc, d) => acc + d.timeSavingsInMinutes, 0);
+    const totalRepos = new Set(selectedData.map(d => d.repositoryPath)).size;
+    const totalFilesChanged = selectedData.reduce((acc, d) => acc + d.totalFilesChanges, 0);
+    const totalRuntime = selectedData.reduce((acc, d) => acc + d.recipeRunInMilliseconds, 0);
 
     return {
       timeSaved: totalTimeSaved,
@@ -99,7 +101,7 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
       filesChanged: totalFilesChanged,
       runtime: totalRuntime / 1000 / 60, // Convertir en minutes
     };
-  }, [filteredData]);
+  }, [filteredData, selectedRows]);
 
   // Preparer les donnees pour le graphique camembert (fichiers modifies par repository)
   const filesByRepoData = useMemo(() => {
@@ -131,10 +133,11 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
       .slice(0, 10); // Limiter a 10 pour la lisibilite
   }, [filteredData]);
 
-  // Preparer les donnees pour le tableau
+  // Preparer les donnees pour le tableau en fonction des selection
   const tableData = useMemo(() => {
-    return filteredData.slice(0, 100); // Limiter a 100 entrees
-  }, [filteredData]);
+    const selectedData = filteredData.filter(d => selectedRows.has(d.runId));
+    return selectedData.slice(0, 100); // Limiter a 100 entrees
+  }, [filteredData, selectedRows]);
 
   // Formater le temps (heures et minutes)
   const formatTime = (minutes: number): string => {
@@ -237,6 +240,7 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
               height={350}
               radius={['30%', '70%']}
               legendPosition="bottom"
+              legendScrollable={true}
               labelShow={true}
               labelFormatter="{b}: {c} min"
               tooltipFormatter={(params) => {
@@ -299,56 +303,20 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
       {/* Tableau des donnees avec filtre */}
       <ChartCard
         title="Historique des executions"
-        subtitle={`${filteredData.length} executions${recipeFilters.length > 0 ? ` (exclu de ${data.length})` : ''}`}
+        subtitle={`${filteredData.length} executions`}
       >
-        {/* Filtre d'exclusion par recipe */}
-        <div className="mb-4 flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
-            <label htmlFor="recipe-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Exclure recipe:
-            </label>
-            <input
-              id="recipe-filter"
-              type="text"
-              value={recipeFilter}
-              onChange={(e) => setRecipeFilter(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="recipeId a exclure..."
-              className="mt-1 block w-full max-w-xs pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            />
-            <button
-              onClick={handleAddRecipeFilter}
-              className="mt-1 px-3 py-2 text-sm font-medium rounded-md bg-red-600 hover:bg-red-700 text-white"
-            >
-              Exclure
-            </button>
-          </div>
-        </div>
-        
-        {/* Tags des filtres d'exclusion */}
-        {recipeFilters.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {recipeFilters.map((filter) => (
-              <span
-                key={filter}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-sm"
-              >
-                Exclu: {filter}
-                <button
-                  onClick={() => handleRemoveRecipeFilter(filter)}
-                  className="ml-1 text-red-600 hover:text-red-800 dark:text-red-300 dark:hover:text-red-100"
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
+                <th className="px-4 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={selectedRows.size === filteredData.length && filteredData.length > 0}
+                    onChange={handleSelectAll}
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Date
                 </th>
@@ -375,6 +343,14 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {tableData.map((row, index) => (
                 <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={selectedRows.has(row.runId)}
+                      onChange={() => handleToggleRow(row.runId)}
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                     {formatDate(row.recipeRunCreatedAt)}
                   </td>

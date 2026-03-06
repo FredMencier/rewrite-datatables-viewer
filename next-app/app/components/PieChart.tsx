@@ -17,7 +17,7 @@ interface PieChartProps {
   showLegend?: boolean;
   center?: [number, number];
   radius?: [string, string];
-  // Options avancées
+  // Options avancees
   tooltipFormatter?: (params: any) => string;
   legendPosition?: 'right' | 'bottom';
   legendFormatter?: (name: string) => string;
@@ -26,6 +26,8 @@ interface PieChartProps {
   borderRadius?: number;
   borderColor?: string;
   borderWidth?: number;
+  // Legend scrollable for many items
+  legendScrollable?: boolean;
 }
 
 const PieChart: React.FC<PieChartProps> = ({
@@ -44,6 +46,7 @@ const PieChart: React.FC<PieChartProps> = ({
   borderRadius = 8,
   borderColor = '#fff',
   borderWidth = 2,
+  legendScrollable = false,
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<echarts.ECharts | null>(null);
@@ -53,6 +56,21 @@ const PieChart: React.FC<PieChartProps> = ({
 
     // Initialiser l'instance echarts
     chartInstance.current = echarts.init(chartRef.current);
+
+    // Configure legend based on scrollable option
+    const legendConfig: echarts.LegendComponentOption = showLegend ? {
+      orient: legendPosition === 'bottom' ? 'horizontal' : 'vertical',
+      bottom: legendPosition === 'bottom' ? 0 : undefined,
+      right: legendPosition === 'right' ? 10 : undefined,
+      top: legendPosition === 'right' ? 'center' : undefined,
+      textStyle: {
+        color: legendPosition === 'bottom' ? '#cbd5e1' : '#6b7280',
+      },
+      formatter: legendFormatter ? (name) => legendFormatter(name) : undefined,
+      type: legendScrollable ? 'scroll' : undefined,
+      scrollDataIndex: 0,
+      height: legendScrollable && legendPosition === 'right' ? height - 50 : undefined,
+    } : { show: false };
 
     const option: echarts.EChartsOption = {
       backgroundColor: 'transparent',
@@ -66,16 +84,7 @@ const PieChart: React.FC<PieChartProps> = ({
           color: '#374151',
         },
       },
-      legend: showLegend ? {
-        orient: legendPosition === 'bottom' ? 'horizontal' : 'vertical',
-        bottom: legendPosition === 'bottom' ? 0 : undefined,
-        right: legendPosition === 'right' ? 10 : undefined,
-        top: legendPosition === 'right' ? 'center' : undefined,
-        textStyle: {
-          color: legendPosition === 'bottom' ? '#cbd5e1' : '#6b7280',
-        },
-        formatter: legendFormatter ? (name) => legendFormatter(name) : undefined,
-      } : { show: false },
+      legend: legendConfig,
       series: [
         {
           name: title || 'Data',
@@ -117,7 +126,7 @@ const PieChart: React.FC<PieChartProps> = ({
 
     chartInstance.current.setOption(option);
 
-    // Gérer le redimensionnement
+    // Gerer le redimensionnement
     const handleResize = () => {
       chartInstance.current?.resize();
     };
@@ -128,7 +137,7 @@ const PieChart: React.FC<PieChartProps> = ({
       window.removeEventListener('resize', handleResize);
       chartInstance.current?.dispose();
     };
-  }, [data, title, height, colors, showLegend, center, radius, tooltipFormatter, legendPosition, legendFormatter, labelShow, labelFormatter, borderRadius, borderColor, borderWidth]);
+  }, [data, title, height, colors, showLegend, center, radius, tooltipFormatter, legendPosition, legendFormatter, labelShow, labelFormatter, borderRadius, borderColor, borderWidth, legendScrollable]);
 
   return (
     <div

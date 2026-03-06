@@ -262,7 +262,7 @@ const RecipesTab: React.FC<RecipesTabProps> = ({
               </span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
-              <span className="text-gray-600 dark:text-gray-400">Temps total d'édition</span>
+              <span className="text-gray-600 dark:text-gray-400">Temps total d&apos;édition</span>
               <span className="font-semibold text-gray-900 dark:text-white">
                 {formatTime(stats.totalEditTime)}
               </span>
