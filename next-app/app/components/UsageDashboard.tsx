@@ -41,32 +41,46 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
   const [selectedRepo, setSelectedRepo] = useState<string>('all');
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
+  const getRowSelectionId = React.useCallback(
+    (entry: UsageReportEntry): string =>
+      `${entry.runId}::${entry.recipeId}::${entry.repositoryPath}::${entry.recipeRunCreatedAt}`,
+    [],
+  );
+
   // Initialize selectedRows with all runIds when data changes
   React.useEffect(() => {
-    const allRunIds = new Set(data.map(d => d.runId));
-    setSelectedRows(allRunIds);
-  }, [data]);
+    const allRowIds = new Set(data.map(getRowSelectionId));
+    setSelectedRows(allRowIds);
+  }, [data, getRowSelectionId]);
 
   // Handle select all
   const handleSelectAll = () => {
-    if (selectedRows.size === filteredData.length) {
-      // If all are selected, deselect all
-      setSelectedRows(new Set());
-    } else {
-      // Otherwise select all
-      setSelectedRows(new Set(filteredData.map(d => d.runId)));
+    const displayedRowIds = displayedData.map(getRowSelectionId);
+    const allDisplayedSelected = displayedRowIds.every(rowId => selectedRows.has(rowId));
+
+    const updatedSelection = new Set(selectedRows);
+
+    if (allDisplayedSelected) {
+      displayedRowIds.forEach(rowId => updatedSelection.delete(rowId));
+      setSelectedRows(updatedSelection);
+      return;
     }
+
+    displayedRowIds.forEach(rowId => updatedSelection.add(rowId));
+    setSelectedRows(updatedSelection);
   };
 
   // Handle individual row toggle
-  const handleToggleRow = (runId: string) => {
-    const newSelected = new Set(selectedRows);
-    if (newSelected.has(runId)) {
-      newSelected.delete(runId);
-    } else {
-      newSelected.add(runId);
+  const handleToggleRow = (rowId: string) => {
+    const updatedSelection = new Set(selectedRows);
+    if (updatedSelection.has(rowId)) {
+      updatedSelection.delete(rowId);
+      setSelectedRows(updatedSelection);
+      return;
     }
-    setSelectedRows(newSelected);
+
+    updatedSelection.add(rowId);
+    setSelectedRows(updatedSelection);
   };
 
   // Obtenir la liste des repositories uniques
@@ -78,22 +92,43 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
   // Filtrer les donnees par repository
   const filteredData = useMemo(() => {
     let result = data;
-    
+
     // Filter by repository
     if (selectedRepo !== 'all') {
       result = result.filter(d => d.repositoryPath === selectedRepo);
     }
-    
+
     return result;
   }, [data, selectedRepo]);
 
+  const selectedEntries = useMemo(
+    () => filteredData.filter(entry => selectedRows.has(getRowSelectionId(entry))),
+    [filteredData, selectedRows, getRowSelectionId],
+  );
+
+  const displayedData = useMemo(() => filteredData.slice(0, 100), [filteredData]);
+
+  const formatRepositoryPath = React.useCallback((path: string) => {
+    if (!path) {
+      return { parentPath: '', repoName: '' };
+    }
+
+    const segments = path.split('/');
+    if (segments.length <= 1) {
+      return { parentPath: '', repoName: path };
+    }
+
+    const repoName = segments[segments.length - 1];
+    const parentPath = segments.slice(0, -1).join('/');
+    return { parentPath, repoName };
+  }, []);
+
   // Calculer les KPIs en fonction des lignes selectionnees
   const kpis = useMemo(() => {
-    const selectedData = filteredData.filter(d => selectedRows.has(d.runId));
-    const totalTimeSaved = selectedData.reduce((acc, d) => acc + d.timeSavingsInMinutes, 0);
-    const totalRepos = new Set(selectedData.map(d => d.repositoryPath)).size;
-    const totalFilesChanged = selectedData.reduce((acc, d) => acc + d.totalFilesChanges, 0);
-    const totalRuntime = selectedData.reduce((acc, d) => acc + d.recipeRunInMilliseconds, 0);
+    const totalTimeSaved = selectedEntries.reduce((acc, entry) => acc + entry.timeSavingsInMinutes, 0);
+    const totalRepos = new Set(selectedEntries.map(entry => entry.repositoryPath)).size;
+    const totalFilesChanged = selectedEntries.reduce((acc, entry) => acc + entry.totalFilesChanges, 0);
+    const totalRuntime = selectedEntries.reduce((acc, entry) => acc + entry.recipeRunInMilliseconds, 0);
 
     return {
       timeSaved: totalTimeSaved,
@@ -101,43 +136,37 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
       filesChanged: totalFilesChanged,
       runtime: totalRuntime / 1000 / 60, // Convertir en minutes
     };
-  }, [filteredData, selectedRows]);
+  }, [selectedEntries]);
 
   // Preparer les donnees pour le graphique camembert (fichiers modifies par repository)
   const filesByRepoData = useMemo(() => {
     const repoFilesMap = new Map<string, number>();
-    
-    filteredData.forEach(d => {
-      const current = repoFilesMap.get(d.repositoryPath) || 0;
-      repoFilesMap.set(d.repositoryPath, current + d.totalFilesChanges);
+
+    selectedEntries.forEach(entry => {
+      const current = repoFilesMap.get(entry.repositoryPath) || 0;
+      repoFilesMap.set(entry.repositoryPath, current + entry.totalFilesChanges);
     });
 
     return Array.from(repoFilesMap.entries())
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 10); // Limiter a 10 pour la lisibilite
-  }, [filteredData]);
+  }, [selectedEntries]);
 
   // Preparer les donnees pour le graphique camembert (temps economise par repository)
   const pieChartData = useMemo(() => {
     const repoTimeMap = new Map<string, number>();
-    
-    filteredData.forEach(d => {
-      const current = repoTimeMap.get(d.repositoryPath) || 0;
-      repoTimeMap.set(d.repositoryPath, current + d.timeSavingsInMinutes);
+
+    selectedEntries.forEach(entry => {
+      const current = repoTimeMap.get(entry.repositoryPath) || 0;
+      repoTimeMap.set(entry.repositoryPath, current + entry.timeSavingsInMinutes);
     });
 
     return Array.from(repoTimeMap.entries())
       .map(([name, value]) => ({ name, value: Math.round(value) }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 10); // Limiter a 10 pour la lisibilite
-  }, [filteredData]);
-
-  // Preparer les donnees pour le tableau en fonction des selection
-  const tableData = useMemo(() => {
-    const selectedData = filteredData.filter(d => selectedRows.has(d.runId));
-    return selectedData.slice(0, 100); // Limiter a 100 entrees
-  }, [filteredData, selectedRows]);
+  }, [selectedEntries]);
 
   // Formater le temps (heures et minutes)
   const formatTime = (minutes: number): string => {
@@ -312,7 +341,7 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
                 <th className="px-4 py-3 text-left">
                   <input
                     type="checkbox"
-                    checked={selectedRows.size === filteredData.length && filteredData.length > 0}
+                    checked={displayedData.length > 0 && displayedData.every(d => selectedRows.has(getRowSelectionId(d)))}
                     onChange={handleSelectAll}
                     className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                   />
@@ -341,13 +370,13 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {tableData.map((row, index) => (
+              {displayedData.map((row, index) => (
                 <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="px-4 py-4 whitespace-nowrap">
                     <input
                       type="checkbox"
-                      checked={selectedRows.has(row.runId)}
-                      onChange={() => handleToggleRow(row.runId)}
+                      checked={selectedRows.has(getRowSelectionId(row))}
+                      onChange={() => handleToggleRow(getRowSelectionId(row))}
                       className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                     />
                   </td>
@@ -358,7 +387,19 @@ const UsageDashboard: React.FC<UsageDashboardProps> = ({ data, isLoading = false
                     {row.recipeId}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
-                    {row.repositoryPath}
+                    {(() => {
+                      const { parentPath, repoName } = formatRepositoryPath(row.repositoryPath);
+                      return (
+                        <span className="block text-sm text-gray-900 dark:text-white max-w-xs truncate">
+                          {parentPath ? (
+                            <span className="block text-gray-500 dark:text-gray-400 truncate">
+                              {parentPath}
+                            </span>
+                          ) : null}
+                          <span className="block truncate">{repoName || row.repositoryPath}</span>
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {row.repositoryBranch}
