@@ -181,21 +181,92 @@ export class DataLoader {
   }
 
   /**
-   * Charge et parse le fichier usage-report.csv
+   * Charge et parse le fichier usage-report le plus récent basé sur le timestamp dans le nom de fichier
+   * Si un filePath spécifique est fourni, il sera utilisé (pour la compatibilité arrière).
+   * Sinon, le fichier le plus récent sera chargé depuis le manifest.
    */
   public async loadUsageReport(filePath: string = '/data/usage-report.csv'): Promise<UsageReportEntry[]> {
+    // Si le filePath est celui par défaut, nous chargeons le plus récent
+    if (filePath === '/data/usage-report.csv') {
+      return this.loadMostRecentUsageReport();
+    }
+    
+    // Sinon, nous chargeons le fichier spécifié (comportement original)
     const cacheKey = `usage-report-${filePath}`;
-
+    
     if (this.cache.has(cacheKey)) {
       return this.cache.get(cacheKey) as UsageReportEntry[];
     }
-
+    
     try {
       const csvData = await this.fetchCSV(filePath);
       return this.parseUsageReportData(csvData, cacheKey);
     } catch (error) {
       console.error('Erreur lors du chargement des données usage-report:', error);
       throw new Error(`Impossible de charger les données depuis ${filePath}: ${error}`);
+    }
+  }
+
+  /**
+   * Charge le fichier usage-report le plus récent basé sur le timestamp dans le nom de fichier
+   * Le fichier avec le timestamp le plus élevé est considéré comme le plus récent
+   */
+  private async loadMostRecentUsageReport(): Promise<UsageReportEntry[]> {
+    const cacheKey = 'usage-report-most-recent';
+    
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey) as UsageReportEntry[];
+    }
+    
+    try {
+      // Charger le manifest pour obtenir la liste des fichiers
+      const manifest = await this.fetchJSON('/data/manifest.json');
+      
+      if (!manifest || !manifest.usageReports || manifest.usageReports.length === 0) {
+        // Si le manifest n'existe pas ou est vide, utiliser le fichier par défaut
+        console.warn('Manifest non trouvé ou vide, utilisation du fichier par défaut');
+        const csvData = await this.fetchCSV('/data/usage-report-1772437230910.csv');
+        const parsedData = this.parseUsageReportData(csvData, '');
+        this.cache.set(cacheKey, parsedData);
+        return parsedData;
+      }
+      
+      // Trouver le fichier avec le timestamp le plus élevé
+      const usageReports = manifest.usageReports;
+      let mostRecentFile = usageReports[0];
+      let maxTimestamp = 0;
+      
+      for (const filename of usageReports) {
+        // Extraire le timestamp du nom de fichier (usage-report-<timestamp>.csv)
+        const match = filename.match(/usage-report-(\d+)\.csv/);
+        if (match) {
+          const timestamp = parseInt(match[1], 10);
+          if (timestamp > maxTimestamp) {
+            maxTimestamp = timestamp;
+            mostRecentFile = filename;
+          }
+        }
+      }
+      
+      // Charger le fichier le plus récent
+      const filePath = `/data/${mostRecentFile}`;
+      const csvData = await this.fetchCSV(filePath);
+      const parsedData = this.parseUsageReportData(csvData, '');
+      
+      this.cache.set(cacheKey, parsedData);
+      return parsedData;
+    } catch (error) {
+      console.error('Erreur lors du chargement du usage report le plus récent:', error);
+      // En cas d'erreur, essayer de charger le fichier par défaut
+      try {
+        const csvData = await this.fetchCSV('/data/usage-report-1772437230910.csv');
+        const parsedData = this.parseUsageReportData(csvData, '');
+        this.cache.set(cacheKey, parsedData);
+        return parsedData;
+      } catch (fallbackError) {
+        console.error('Erreur lors du chargement du fichier de secours:', fallbackError);
+        throw new Error(`Impossible de charger les données usage-report: ${error}`);
+      }
     }
   }
 
